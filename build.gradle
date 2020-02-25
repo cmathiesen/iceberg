@@ -110,6 +110,12 @@ project(':iceberg-api') {
 project(':iceberg-common') {}
 
 project(':iceberg-core') {
+  apply plugin: 'com.github.johnrengelman.shadow'
+
+  tasks.assemble.dependsOn tasks.shadowJar
+  tasks.install.dependsOn tasks.shadowJar
+  tasks.javadocJar.dependsOn tasks.shadowJar
+
   dependencies {
     compile project(':iceberg-api')
     compile project(':iceberg-common')
@@ -128,9 +134,43 @@ project(':iceberg-core') {
 
     testCompile project(path: ':iceberg-api', configuration: 'testArtifacts')
   }
+
+  shadowJar {
+    // shade compileOnly dependencies to avoid including in transitive dependencies
+    configurations = [project.configurations.compileOnly]
+
+    zip64 true
+
+    // include the LICENSE and NOTICE files for the shaded Jar
+    from(projectDir) {
+      include 'LICENSE'
+      include 'NOTICE'
+    }
+
+    // Relocate dependencies to avoid conflicts
+    relocate 'com.google', 'org.apache.iceberg.shaded.com.google'
+    relocate 'com.fasterxml', 'org.apache.iceberg.shaded.com.fasterxml'
+    relocate 'com.github.benmanes', 'org.apache.iceberg.shaded.com.github.benmanes'
+    relocate 'org.checkerframework', 'org.apache.iceberg.shaded.org.checkerframework'
+    relocate 'org.apache.avro', 'org.apache.iceberg.shaded.org.apache.avro'
+    relocate 'avro.shaded', 'org.apache.iceberg.shaded.org.apache.avro.shaded'
+    relocate 'com.thoughtworks.paranamer', 'org.apache.iceberg.shaded.com.thoughtworks.paranamer'
+    relocate 'org.apache.parquet', 'org.apache.iceberg.shaded.org.apache.parquet'
+    relocate 'shaded.parquet', 'org.apache.iceberg.shaded.org.apache.parquet.shaded'
+    // relocate Avro's jackson dependency to share parquet-jackson locations
+    relocate 'org.codehaus.jackson', 'org.apache.iceberg.shaded.org.apache.parquet.shaded.org.codehaus.jackson'
+    relocate 'org.apache.orc', 'org.apache.iceberg.shaded.org.apache.orc'
+    relocate 'io.airlift', 'org.apache.iceberg.shaded.io.airlift'
+  }
 }
 
 project(':iceberg-data') {
+  apply plugin: 'com.github.johnrengelman.shadow'
+
+  tasks.assemble.dependsOn tasks.shadowJar
+  tasks.install.dependsOn tasks.shadowJar
+  tasks.javadocJar.dependsOn tasks.shadowJar
+
   dependencies {
     compile project(':iceberg-api')
     compile project(':iceberg-core')
@@ -140,6 +180,9 @@ project(':iceberg-data') {
       exclude group: 'commons-beanutils'
       exclude group: 'org.apache.avro', module: 'avro'
       exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+    }
+    compile ("org.apache.hive:hive-serde:2.3.4") {
+      exclude group: 'org.apache.avro', module: 'avro'
     }
 
     testCompile("org.apache.hadoop:hadoop-client") {
@@ -153,6 +196,34 @@ project(':iceberg-data') {
   test {
     // Only for TestSplitScan as of Gradle 5.0+
     maxHeapSize '1500m'
+  }
+
+  shadowJar {
+    // shade compileOnly dependencies to avoid including in transitive dependencies
+    configurations = [project.configurations.compileOnly]
+
+    zip64 true
+
+    // include the LICENSE and NOTICE files for the shaded Jar
+    from(projectDir) {
+      include 'LICENSE'
+      include 'NOTICE'
+    }
+
+    // Relocate dependencies to avoid conflicts
+    relocate 'com.google', 'org.apache.iceberg.shaded.com.google'
+    relocate 'com.fasterxml', 'org.apache.iceberg.shaded.com.fasterxml'
+    relocate 'com.github.benmanes', 'org.apache.iceberg.shaded.com.github.benmanes'
+    relocate 'org.checkerframework', 'org.apache.iceberg.shaded.org.checkerframework'
+    relocate 'org.apache.avro', 'org.apache.iceberg.shaded.org.apache.avro'
+    relocate 'avro.shaded', 'org.apache.iceberg.shaded.org.apache.avro.shaded'
+    relocate 'com.thoughtworks.paranamer', 'org.apache.iceberg.shaded.com.thoughtworks.paranamer'
+    relocate 'org.apache.parquet', 'org.apache.iceberg.shaded.org.apache.parquet'
+    relocate 'shaded.parquet', 'org.apache.iceberg.shaded.org.apache.parquet.shaded'
+    // relocate Avro's jackson dependency to share parquet-jackson locations
+    relocate 'org.codehaus.jackson', 'org.apache.iceberg.shaded.org.apache.parquet.shaded.org.codehaus.jackson'
+    relocate 'org.apache.orc', 'org.apache.iceberg.shaded.org.apache.orc'
+    relocate 'io.airlift', 'org.apache.iceberg.shaded.io.airlift'
   }
 }
 
@@ -193,6 +264,36 @@ project(':iceberg-hive') {
   }
 }
 
+project(':iceberg-mr') {
+  dependencies {
+    compile project(':iceberg-api')
+    compile project(path: ':iceberg-core', configuration: 'shadow')
+    compile project(path: ':iceberg-data', configuration: 'shadow')
+    compile project(path: ':iceberg-parquet', configuration: 'shadow')
+
+    compileOnly("org.apache.hadoop:hadoop-client") {
+      exclude group: 'org.apache.avro', module: 'avro'
+      exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+    }
+    compile "org.apache.avro:avro"
+    compile "com.github.ben-manes.caffeine:caffeine"
+
+    compile ("org.apache.hive:hive-serde:2.3.4") {
+      exclude group: 'org.apache.parquet', module:'parquet-hadoop-bundle'
+    }
+
+
+    //Included because we shade them in iceberg-core
+    compile "com.fasterxml.jackson.core:jackson-databind"
+    compile "com.fasterxml.jackson.core:jackson-core"
+
+    testCompile('com.klarna:hiverunner:5.1.0'){
+      exclude group: 'javax.jms', module: 'jms'
+      exclude group: 'org.apache.avro', module: 'avro'
+    }
+  }
+}
+
 project(':iceberg-orc') {
   dependencies {
     compile project(':iceberg-api')
@@ -220,6 +321,12 @@ project(':iceberg-orc') {
 }
 
 project(':iceberg-parquet') {
+  apply plugin: 'com.github.johnrengelman.shadow'
+
+  tasks.assemble.dependsOn tasks.shadowJar
+  tasks.install.dependsOn tasks.shadowJar
+  tasks.javadocJar.dependsOn tasks.shadowJar
+
   dependencies {
     compile project(':iceberg-api')
     compile project(':iceberg-core')
@@ -237,6 +344,34 @@ project(':iceberg-parquet') {
     }
 
     testCompile project(path: ':iceberg-core', configuration: 'testArtifacts')
+  }
+
+  shadowJar {
+    // shade compileOnly dependencies to avoid including in transitive dependencies
+    configurations = [project.configurations.compileOnly]
+
+    zip64 true
+
+    // include the LICENSE and NOTICE files for the shaded Jar
+    from(projectDir) {
+      include 'LICENSE'
+      include 'NOTICE'
+    }
+
+    // Relocate dependencies to avoid conflicts
+    relocate 'com.google', 'org.apache.iceberg.shaded.com.google'
+    relocate 'com.fasterxml', 'org.apache.iceberg.shaded.com.fasterxml'
+    relocate 'com.github.benmanes', 'org.apache.iceberg.shaded.com.github.benmanes'
+    relocate 'org.checkerframework', 'org.apache.iceberg.shaded.org.checkerframework'
+    relocate 'org.apache.avro', 'org.apache.iceberg.shaded.org.apache.avro'
+    relocate 'avro.shaded', 'org.apache.iceberg.shaded.org.apache.avro.shaded'
+    relocate 'com.thoughtworks.paranamer', 'org.apache.iceberg.shaded.com.thoughtworks.paranamer'
+    relocate 'org.apache.parquet', 'org.apache.iceberg.shaded.org.apache.parquet'
+    relocate 'shaded.parquet', 'org.apache.iceberg.shaded.org.apache.parquet.shaded'
+    // relocate Avro's jackson dependency to share parquet-jackson locations
+    relocate 'org.codehaus.jackson', 'org.apache.iceberg.shaded.org.apache.parquet.shaded.org.codehaus.jackson'
+    relocate 'org.apache.orc', 'org.apache.iceberg.shaded.org.apache.orc'
+    relocate 'io.airlift', 'org.apache.iceberg.shaded.io.airlift'
   }
 }
 
@@ -353,6 +488,7 @@ project(':iceberg-spark-runtime') {
     archiveName = "iceberg-spark-runtime-${version}.${extension}"
   }
 }
+
 
 @Memoized
 boolean isVersionFileExists() {

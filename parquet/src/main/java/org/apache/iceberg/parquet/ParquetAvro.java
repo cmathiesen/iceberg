@@ -22,8 +22,12 @@ package org.apache.iceberg.parquet;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+
 import org.apache.avro.Conversion;
 import org.apache.avro.Conversions;
 import org.apache.avro.LogicalType;
@@ -178,11 +182,41 @@ class ParquetAvro {
     }
   }
 
+  private static class UUIDConversion extends Conversion<UUID> {
+    @Override
+    public Class<UUID> getConvertedType() {
+      return UUID.class;
+    }
+
+    @Override
+    public String getLogicalTypeName() {
+      return LogicalTypes.uuid().getName();
+    }
+
+    @Override
+    public UUID fromFixed(GenericFixed value, Schema schema, LogicalType type) {
+      ByteBuffer buffer = ByteBuffer.wrap(value.bytes());
+      buffer.order(ByteOrder.BIG_ENDIAN);
+      long mostSigBits = buffer.getLong();
+      long leastSigBits = buffer.getLong();
+      return new UUID(mostSigBits, leastSigBits);
+    }
+
+    @Override
+    public GenericFixed toFixed(UUID value, Schema schema, LogicalType type) {
+      ByteBuffer buffer = ByteBuffer.allocate(16);
+      buffer.order(ByteOrder.BIG_ENDIAN);
+      buffer.putLong(value.getMostSignificantBits());
+      buffer.putLong(value.getLeastSignificantBits());
+      return new GenericData.Fixed(schema, buffer.array());
+    }
+  }
+
   static final GenericData DEFAULT_MODEL = new SpecificData() {
     private final Conversion<?> fixedDecimalConversion = new FixedDecimalConversion();
     private final Conversion<?> intDecimalConversion = new IntDecimalConversion();
     private final Conversion<?> longDecimalConversion = new LongDecimalConversion();
-    private final Conversion<?> uuidConversion = new UUIDConversion();
+    private final Conversion<?> uuidConversion = new ParquetAvro.UUIDConversion();
 
     {
       addLogicalTypeConversion(fixedDecimalConversion);
