@@ -59,7 +59,7 @@ public class TestIcebergInputFormat<T> {
         .append("STORED AS ")
         .append("INPUTFORMAT 'org.apache.iceberg.mr.IcebergInputFormat' ")
         .append("OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat' ")
-        .append("LOCATION '/Users/cmathiesen/projects/opensource/forks/guilload-fork/incubator-iceberg/mr/test/test-table' ")
+        .append("LOCATION '/Users/cmathiesen/projects/opensource/forks/eg-iceberg-fork/incubator-iceberg/mr/src/test/resources/test-table' ")
         .append("TBLPROPERTIES ('avro.schema.literal' = '{\"namespace\":\"source_db\",\"type\":\"record\",\"name\":\"table_a\",\"fields\":[{\"name\":\"name\",\"type\":[\"null\",\"string\"],\"default\":null,\"field_id\":1},{\"name\":\"salary\",\"type\":[\"null\",\"long\"],\"default\":null,\"field_id\":2}]}')")
         .toString());
 
@@ -68,7 +68,7 @@ public class TestIcebergInputFormat<T> {
 
   @Test
   public void testReadingManifestListFile() {
-    InputFile file = Files.localInput("/Users/cmathiesen/projects/opensource/forks/guilload-fork/incubator-iceberg/mr/test/test-table/metadata/snap-3242242803067212665-1-c606bdfa-7709-4bc9-a3cc-7cbeccdb2882.avro");
+    InputFile file = Files.localInput("/Users/cmathiesen/projects/opensource/forks/eg-iceberg-fork/incubator-iceberg/mr/src/test/resources/test-table/metadata/snap-7829799286772121706-1-1a3ffe32-d8da-47cf-9a8c-0e4c889a3a4c.avro");
     //Code from BaseSnapshot on trying to read a manifest-list file
     CloseableIterable<ManifestFile> manifests = Avro
         .read(file)
@@ -85,7 +85,7 @@ public class TestIcebergInputFormat<T> {
   @Test
   public void testInputSplits() throws IOException {
     Configuration conf = new Configuration(false);
-    conf.set("location", "file:/Users/cmathiesen/projects/opensource/forks/guilload-fork/incubator-iceberg/mr/test/test-table");
+    conf.set("location", "file:/Users/cmathiesen/projects/opensource/forks/eg-iceberg-fork/incubator-iceberg/mr/src/test/resources/test-table");
     JobConf jobConf = new JobConf(conf);
 
     InputFormat inputFormat = ReflectionUtils.newInstance(IcebergInputFormat.class, conf);
@@ -98,18 +98,9 @@ public class TestIcebergInputFormat<T> {
 
   @Test
   public void testReadingParquet() {
-    InputFile file = Files.localInput("/Users/cmathiesen/projects/opensource/forks/guilload-fork/incubator-iceberg/mr/test/test-table/data/00000-1-5a11246b-b6b0-4597-b8cd-587dae493c8d-00000.parquet");
+    InputFile file = Files.localInput("/Users/cmathiesen/projects/opensource/forks/eg-iceberg-fork/incubator-iceberg/mr/src/test/resources/test-table/data/00000-1-c7557bc3-ae0d-46fb-804e-e9806abf81c7-00000.parquet");
     Parquet.ReadBuilder builder = Parquet.read(file);
     CloseableIterable<T> reader = builder.build();
     System.out.println("test");
   }
-
-  /*@Test
-  public void testJSONNode() throws IOException {
-    ObjectMapper objectMapper = new ObjectMapper();
-    File file = new File("/Users/cmathiesen/projects/opensource/forks/guilload-fork/incubator-iceberg/mr/test/test-table/metadata/v2.metadata.json");
-    JsonNode node = objectMapper.readTree(file);
-    JsonNode schemaField = node.get("schema");
-    Schema schema = SchemaParser.fromJson(schemaField);
-  }*/
 }
