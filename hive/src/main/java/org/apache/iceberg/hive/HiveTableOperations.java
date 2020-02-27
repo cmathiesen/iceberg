@@ -175,7 +175,7 @@ public class HiveTableOperations extends BaseMetastoreTableOperations {
           EnvironmentContext envContext = new EnvironmentContext(
               ImmutableMap.of(StatsSetupConst.DO_NOT_UPDATE_STATS, StatsSetupConst.TRUE)
           );
-          client.alter_table(database, tableName, tbl, envContext);
+          client.alter_table_with_environmentContext(database, tableName, tbl, envContext);
           return null;
         });
       } else {
