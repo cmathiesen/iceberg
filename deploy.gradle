@@ -59,8 +59,32 @@ subprojects {
   publishing {
     publications {
       shadow(MavenPublication) {
-        publication -> project.shadow.component(publication)
-        version '0.7.1-incubating'
+          publication -> project.shadow.component(publication)
+          version '0.7.1-incubating'
+          groupId = 'org.apache.iceberg'
+          pom {
+            name = 'Apache Iceberg (incubating)'
+            description = 'A table format for huge analytic datasets'
+            url = 'https://iceberg.apache.org'
+            licenses {
+              license {
+                name = 'The Apache Software License, Version 2.0'
+                url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+              }
+            }
+            mailingLists {
+              mailingList {
+                name = 'Dev Mailing List'
+                post = 'dev@iceberg.apache.org'
+                subscribe = 'dev-subscribe@iceberg.apache.org'
+                unsubscribe = 'dev-unsubscribe@iceberg.apache.org'
+              }
+            }
+            issueManagement {
+              system = 'GitHub'
+              url = 'https://github.com/apache/incubator-iceberg/issues'
+            }
+          }
       }
     }
   }
