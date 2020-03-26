@@ -80,19 +80,6 @@ subprojects {
 
   sourceCompatibility = '1.8'
   targetCompatibility = '1.8'
-
-  dependencies {
-    compile 'org.slf4j:slf4j-api'
-    compile('com.google.guava:guava') {
-      // may be LGPL - use ALv2 findbugs-annotations instead
-      exclude group: 'com.google.code.findbugs'
-    }
-    compile 'com.github.stephenc.findbugs:findbugs-annotations:1.3.9-1'
-
-    testCompile 'junit:junit'
-    testCompile 'org.slf4j:slf4j-simple'
-    testCompile 'org.mockito:mockito-core'
-  }
 }
 
 apply from: 'baseline.gradle'
@@ -102,6 +89,17 @@ apply from: 'jmh.gradle'
 
 project(':iceberg-api') {
   dependencies {
+    compile('com.google.guava:guava') {
+      // may be LGPL - use ALv2 findbugs-annotations instead
+      exclude group: 'com.google.code.findbugs'
+    }
+    compileOnly 'org.slf4j:slf4j-api'
+    compileOnly 'com.github.stephenc.findbugs:findbugs-annotations:1.3.9-1'
+
+    testCompile 'junit:junit'
+    testCompile 'org.slf4j:slf4j-simple'
+    testCompile 'org.mockito:mockito-core'
+
     testCompile "org.apache.avro:avro"
     testCompile 'joda-time:joda-time'
   }
