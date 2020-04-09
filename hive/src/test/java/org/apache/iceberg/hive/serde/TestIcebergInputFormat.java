@@ -18,6 +18,7 @@
  */
 
 //TODO: decide if we want to put the inputformat test in a separate class as opposed to testing serde etc
+
 package org.apache.iceberg.hive.serde;
 
 import com.klarna.hiverunner.HiveShell;
@@ -36,6 +37,7 @@ import org.apache.iceberg.DataFiles;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.data.Record;
 import org.apache.iceberg.hadoop.HadoopTables;
 import org.apache.iceberg.mr.mapred.IcebergInputFormat;
 import org.apache.iceberg.mr.mapred.IcebergWritable;
