@@ -53,7 +53,7 @@ public class TestIcebergInputFormat {
 
   //TODO flesh out with more tests of the IF itself
   //TODO: do we still need the table data etc. if we're not testing from Hive?
-  
+
   @Before
   public void before() throws IOException {
     tableLocation = java.nio.file.Files.createTempDirectory("temp").toFile();

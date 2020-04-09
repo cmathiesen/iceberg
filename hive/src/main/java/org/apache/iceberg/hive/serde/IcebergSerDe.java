@@ -35,6 +35,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableMetadataParser;
 import org.apache.iceberg.hadoop.HadoopFileIO;
+import org.apache.iceberg.mr.mapred.IcebergWritable;
 import org.apache.iceberg.types.Types;
 
 public class IcebergSerDe extends AbstractSerDe {

@@ -334,6 +334,7 @@ project(':iceberg-hive') {
     compile project(path: ':iceberg-core', configuration: 'shadow')
     compile project (path: ':iceberg-api', configuration: 'shadow')
     compile project (path: ':iceberg-common', configuration: 'shadow')
+    compile project (path: ':iceberg-mr', configuration: 'shadow')
 
     compileOnly 'org.slf4j:slf4j-api'
     compileOnly 'com.github.stephenc.findbugs:findbugs-annotations:1.3.9-1'
@@ -427,13 +428,20 @@ project(':iceberg-mr') {
     compile project(path: ':iceberg-parquet', configuration: 'shadow')
     compile project(path: ':iceberg-data', configuration: 'shadow')
 
+    compileOnly "org.apache.avro:avro"
     compileOnly("org.apache.hadoop:hadoop-client") {
       exclude group: 'org.apache.avro', module: 'avro'
+      exclude group: 'com.google.guava', module: 'guava'
+    }
+    compileOnly('com.google.guava:guava:28.0-jre') {
+      // may be LGPL - use ALv2 findbugs-annotations instead
+      exclude group: 'com.google.code.findbugs'
     }
 
     testCompile project(path: ':iceberg-data', configuration: 'testArtifacts')
     testCompile project(path: ':iceberg-api', configuration: 'testArtifacts')
     testCompile project(path: ':iceberg-core', configuration: 'testArtifacts')
+	testCompile 'junit:junit'
   }
   shadowJar {
     // shade compileOnly dependencies to avoid including in transitive dependencies
