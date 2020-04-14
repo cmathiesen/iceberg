@@ -23,7 +23,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import java.io.IOException;
 import org.apache.iceberg.AppendFiles;
-import org.apache.iceberg.AssertHelpers;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.DataFiles;
 import org.apache.iceberg.PartitionSpec;
