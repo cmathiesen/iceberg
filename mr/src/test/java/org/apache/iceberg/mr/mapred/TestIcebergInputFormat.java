@@ -75,24 +75,34 @@ public class TestIcebergInputFormat {
   @Test
   public void testGetSplits() throws IOException {
     conf.set("location", "file:" + tableLocation);
+    conf.set("iceberg.catalog", "hadoop.tables");
     InputSplit[] splits = format.getSplits(conf, 1);
     assertEquals(splits.length, 1);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testGetSplitsNoLocation() throws IOException {
+    conf.set("iceberg.catalog", "hadoop.tables");
+    format.getSplits(conf, 1);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testGetSplitsNoCatalog() throws IOException {
+    conf.set("location", "file:" + tableLocation);
     format.getSplits(conf, 1);
   }
 
   @Test(expected = IOException.class)
   public void testGetSplitsInvalidLocationUri() throws IOException {
     conf.set("location", "http:");
+    conf.set("iceberg.catalog", "hadoop.tables");
     format.getSplits(conf, 1);
   }
 
   @Test
   public void testGetRecordReader() throws IOException {
     conf.set("location", "file:" + tableLocation);
+    conf.set("iceberg.catalog", "hadoop.tables");
     InputSplit[] splits = format.getSplits(conf, 1);
     RecordReader reader = format.getRecordReader(splits[0], conf, null);
     IcebergWritable value = (IcebergWritable) reader.createValue();

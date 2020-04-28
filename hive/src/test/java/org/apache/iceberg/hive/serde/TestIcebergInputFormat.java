@@ -94,7 +94,7 @@ public class TestIcebergInputFormat {
             .append("OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat' ")
             .append("LOCATION '")
             .append(tableLocation.getAbsolutePath())
-            .append("'")
+            .append("' TBLPROPERTIES ('iceberg.catalog'='hadoop.tables')")
             .toString());
 
     List<Object[]> result = shell.executeStatement("SELECT * FROM source_db.table_a");
@@ -110,6 +110,7 @@ public class TestIcebergInputFormat {
     IcebergInputFormat format = new IcebergInputFormat();
     JobConf conf = new JobConf();
     conf.set("location", "file:" + tableLocation);
+    conf.set("iceberg.catalog", "hadoop.tables");
     InputSplit[] splits = format.getSplits(conf, 1);
     assertEquals(splits.length, 1);
   }
@@ -119,6 +120,7 @@ public class TestIcebergInputFormat {
     IcebergInputFormat format = new IcebergInputFormat();
     JobConf conf = new JobConf();
     conf.set("location", "file:" + tableLocation);
+    conf.set("iceberg.catalog", "hadoop.tables");
     InputSplit[] splits = format.getSplits(conf, 1);
     RecordReader reader = format.getRecordReader(splits[0], conf, null);
     IcebergWritable value = (IcebergWritable) reader.createValue();

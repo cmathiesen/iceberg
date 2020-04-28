@@ -28,6 +28,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
+import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -38,7 +42,9 @@ import org.apache.iceberg.DataFile;
 import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
+import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.apache.iceberg.hadoop.HadoopInputFile;
 import org.apache.iceberg.hadoop.HadoopTables;
 import org.apache.iceberg.io.CloseableIterable;
@@ -47,10 +53,12 @@ import org.apache.iceberg.mr.SerializationUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class IcebergInputFormat<T> implements InputFormat<Void, T> {
+public class IcebergInputFormat<T> implements InputFormat<Void, T>, CombineHiveInputFormat.AvoidSplitCombination {
   private static final Logger LOG = LoggerFactory.getLogger(IcebergInputFormat.class);
 
+  static final String CATALOG_NAME = "iceberg.catalog";
   static final String REUSE_CONTAINERS = "iceberg.mr.reuse.containers";
+  static final String TABLE_NAME = "name";
 
   private Table table;
 
@@ -61,29 +69,47 @@ public class IcebergInputFormat<T> implements InputFormat<Void, T> {
     List<CombinedScanTask> tasks = (List<CombinedScanTask>) StreamSupport
         .stream(taskIterable.spliterator(), false)
         .collect(Collectors.toList());
-    return createSplits(tasks);
+    URI location = getPathURI(conf);
+    return createSplits(tasks, location.getPath());
   }
 
   private Table findTable(JobConf conf) throws IOException {
-    HadoopTables tables = new HadoopTables(conf);
+    String catalogName = conf.get(CATALOG_NAME);
+    if (catalogName == null) {
+      throw new IllegalArgumentException("Catalog property: 'iceberg.catalog' not set in JobConf");
+    }
+    URI location = getPathURI(conf);
+    if (catalogName.equals("hadoop.tables")) {
+      HadoopTables tables = new HadoopTables(conf);
+      table = tables.load(location.getPath());
+    } else if (catalogName.equals("hadoop.catalog")) {
+      HadoopCatalog catalog = new HadoopCatalog(conf, location.getPath());
+      TableIdentifier id = TableIdentifier.parse(conf.get(TABLE_NAME));
+      table = catalog.loadTable(id);
+    } else if (catalogName.equals("hive.catalog")) {
+      //TODO Implement HiveCatalog
+    }
+    return table;
+  }
+
+  private URI getPathURI(JobConf conf) throws IOException {
     String tableDir = conf.get("location");
     if (tableDir == null) {
       throw new IllegalArgumentException("Table 'location' not set in JobConf");
     }
-    URI location = null;
+    URI location;
     try {
       location = new URI(tableDir);
     } catch (URISyntaxException e) {
       throw new IOException("Unable to create URI for table location: '" + tableDir + "'", e);
     }
-    table = tables.load(location.getPath());
-    return table;
+    return location;
   }
 
-  private InputSplit[] createSplits(List<CombinedScanTask> tasks) {
+  private InputSplit[] createSplits(List<CombinedScanTask> tasks, String location) {
     InputSplit[] splits = new InputSplit[tasks.size()];
     for (int i = 0; i < tasks.size(); i++) {
-      splits[i] = new IcebergSplit(tasks.get(i));
+      splits[i] = new IcebergSplit(tasks.get(i), location);
     }
     return splits;
   }
@@ -91,6 +117,11 @@ public class IcebergInputFormat<T> implements InputFormat<Void, T> {
   @Override
   public RecordReader getRecordReader(InputSplit split, JobConf job, Reporter reporter) throws IOException {
     return new IcebergRecordReader(split, job);
+  }
+
+  @Override
+  public boolean shouldSkipCombine(Path path, Configuration conf) throws IOException {
+    return true;
   }
 
   public class IcebergRecordReader implements RecordReader<Void, IcebergWritable> {
@@ -176,31 +207,42 @@ public class IcebergInputFormat<T> implements InputFormat<Void, T> {
     }
   }
 
-  private static class IcebergSplit implements InputSplit {
-
-    private static final String[] ANYWHERE = new String[]{"*"};
+  /**
+   * FileSplit is extended rather than implementing the InputSplit interface due to Hive's HiveInputFormat
+   * expecting a split which is an instance of FileSplit.
+   */
+  private static class IcebergSplit extends FileSplit {
 
     private CombinedScanTask task;
+    private String partitionLocation;
 
-    IcebergSplit(CombinedScanTask task) {
+    IcebergSplit() {
+    }
+
+    IcebergSplit(CombinedScanTask task, String partitionLocation) {
       this.task = task;
+      this.partitionLocation = partitionLocation;
     }
 
     @Override
-    public long getLength() throws IOException {
+    public long getLength() {
       return task.files().stream().mapToLong(FileScanTask::length).sum();
     }
 
     @Override
     public String[] getLocations() throws IOException {
-      return ANYWHERE;
+      return new String[0];
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
-      byte[] data = SerializationUtil.serializeToBytes(this.task);
-      out.writeInt(data.length);
-      out.write(data);
+      byte[] dataTask = SerializationUtil.serializeToBytes(this.task);
+      out.writeInt(dataTask.length);
+      out.write(dataTask);
+
+      byte[] tableName = SerializationUtil.serializeToBytes(this.partitionLocation);
+      out.writeInt(tableName.length);
+      out.write(tableName);
     }
 
     @Override
@@ -208,6 +250,20 @@ public class IcebergInputFormat<T> implements InputFormat<Void, T> {
       byte[] data = new byte[in.readInt()];
       in.readFully(data);
       this.task = SerializationUtil.deserializeFromBytes(data);
+
+      byte[] name = new byte[in.readInt()];
+      in.readFully(name);
+      this.partitionLocation = SerializationUtil.deserializeFromBytes(name);
+    }
+
+    @Override
+    public Path getPath() {
+      return new Path(partitionLocation);
+    }
+
+    @Override
+    public long getStart() {
+      return 0L;
     }
 
     public CombinedScanTask getTask() {
