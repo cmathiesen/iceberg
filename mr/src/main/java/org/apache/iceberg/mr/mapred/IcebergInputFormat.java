@@ -38,27 +38,25 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.iceberg.CombinedScanTask;
-import org.apache.iceberg.DataFile;
 import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
-import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.hadoop.HadoopCatalog;
-import org.apache.iceberg.hadoop.HadoopInputFile;
 import org.apache.iceberg.hadoop.HadoopTables;
 import org.apache.iceberg.io.CloseableIterable;
-import org.apache.iceberg.io.InputFile;
 import org.apache.iceberg.mr.SerializationUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * CombineHiveInputFormat.AvoidSplitCombination is implemented to correctly delegate InputSplit
+ * creation to this class. See: https://stackoverflow.com/questions/29133275/
+ * custom-inputformat-getsplits-never-called-in-hive
+ */
 public class IcebergInputFormat<T> implements InputFormat<Void, T>, CombineHiveInputFormat.AvoidSplitCombination {
   private static final Logger LOG = LoggerFactory.getLogger(IcebergInputFormat.class);
 
-  static final String CATALOG_NAME = "iceberg.catalog";
-  static final String REUSE_CONTAINERS = "iceberg.mr.reuse.containers";
-  static final String TABLE_NAME = "name";
+  static final String TABLE_LOCATION = "location";
 
   private Table table;
 
@@ -69,41 +67,23 @@ public class IcebergInputFormat<T> implements InputFormat<Void, T>, CombineHiveI
     List<CombinedScanTask> tasks = (List<CombinedScanTask>) StreamSupport
         .stream(taskIterable.spliterator(), false)
         .collect(Collectors.toList());
-    URI location = getPathURI(conf);
-    return createSplits(tasks, location.getPath());
+    return createSplits(tasks, table.location());
   }
 
   private Table findTable(JobConf conf) throws IOException {
-    String catalogName = conf.get(CATALOG_NAME);
-    if (catalogName == null) {
-      throw new IllegalArgumentException("Catalog property: 'iceberg.catalog' not set in JobConf");
-    }
-    URI location = getPathURI(conf);
-    if (catalogName.equals("hadoop.tables")) {
-      HadoopTables tables = new HadoopTables(conf);
-      table = tables.load(location.getPath());
-    } else if (catalogName.equals("hadoop.catalog")) {
-      HadoopCatalog catalog = new HadoopCatalog(conf, location.getPath());
-      TableIdentifier id = TableIdentifier.parse(conf.get(TABLE_NAME));
-      table = catalog.loadTable(id);
-    } else if (catalogName.equals("hive.catalog")) {
-      //TODO Implement HiveCatalog
-    }
-    return table;
-  }
-
-  private URI getPathURI(JobConf conf) throws IOException {
-    String tableDir = conf.get("location");
+    HadoopTables tables = new HadoopTables(conf);
+    String tableDir = conf.get(TABLE_LOCATION);
     if (tableDir == null) {
       throw new IllegalArgumentException("Table 'location' not set in JobConf");
     }
-    URI location;
+    URI location = null;
     try {
       location = new URI(tableDir);
     } catch (URISyntaxException e) {
       throw new IOException("Unable to create URI for table location: '" + tableDir + "'", e);
     }
-    return location;
+    table = tables.load(location.getPath());
+    return table;
   }
 
   private InputSplit[] createSplits(List<CombinedScanTask> tasks, String location) {
@@ -132,12 +112,10 @@ public class IcebergInputFormat<T> implements InputFormat<Void, T>, CombineHiveI
     private CloseableIterable<Record> reader;
     private Iterator<Record> recordIterator;
     private Record currentRecord;
-    private boolean reuseContainers;
 
     public IcebergRecordReader(InputSplit split, JobConf conf) throws IOException {
       this.split = (IcebergSplit) split;
       this.conf = conf;
-      this.reuseContainers = conf.getBoolean(REUSE_CONTAINERS, false);
       initialise();
     }
 
@@ -148,11 +126,9 @@ public class IcebergInputFormat<T> implements InputFormat<Void, T>, CombineHiveI
 
     private void nextTask() {
       FileScanTask currentTask = tasks.next();
-      DataFile file = currentTask.file();
-      InputFile inputFile = HadoopInputFile.fromLocation(file.path(), conf);
       Schema tableSchema = table.schema();
-
-      reader = IcebergReaderFactory.createReader(file, currentTask, inputFile, tableSchema, reuseContainers);
+      org.apache.iceberg.mr.IcebergRecordReader wrappedReader = new org.apache.iceberg.mr.IcebergRecordReader();
+      reader = wrappedReader.createReader(conf, currentTask, tableSchema);
       recordIterator = reader.iterator();
     }
 
@@ -213,6 +189,8 @@ public class IcebergInputFormat<T> implements InputFormat<Void, T>, CombineHiveI
    */
   private static class IcebergSplit extends FileSplit {
 
+    private static final String[] ANYWHERE = new String[]{"*"};
+
     private CombinedScanTask task;
     private String partitionLocation;
 
@@ -231,29 +209,7 @@ public class IcebergInputFormat<T> implements InputFormat<Void, T>, CombineHiveI
 
     @Override
     public String[] getLocations() throws IOException {
-      return new String[0];
-    }
-
-    @Override
-    public void write(DataOutput out) throws IOException {
-      byte[] dataTask = SerializationUtil.serializeToBytes(this.task);
-      out.writeInt(dataTask.length);
-      out.write(dataTask);
-
-      byte[] tableName = SerializationUtil.serializeToBytes(this.partitionLocation);
-      out.writeInt(tableName.length);
-      out.write(tableName);
-    }
-
-    @Override
-    public void readFields(DataInput in) throws IOException {
-      byte[] data = new byte[in.readInt()];
-      in.readFully(data);
-      this.task = SerializationUtil.deserializeFromBytes(data);
-
-      byte[] name = new byte[in.readInt()];
-      in.readFully(name);
-      this.partitionLocation = SerializationUtil.deserializeFromBytes(name);
+      return ANYWHERE;
     }
 
     @Override
@@ -264,6 +220,28 @@ public class IcebergInputFormat<T> implements InputFormat<Void, T>, CombineHiveI
     @Override
     public long getStart() {
       return 0L;
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      byte[] data = SerializationUtil.serializeToBytes(this.task);
+      out.writeInt(data.length);
+      out.write(data);
+
+      byte[] tableLocation = SerializationUtil.serializeToBytes(this.partitionLocation);
+      out.writeInt(tableLocation.length);
+      out.write(tableLocation);
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      byte[] data = new byte[in.readInt()];
+      in.readFully(data);
+      this.task = SerializationUtil.deserializeFromBytes(data);
+
+      byte[] location = new byte[in.readInt()];
+      in.readFully(location);
+      this.partitionLocation = SerializationUtil.deserializeFromBytes(location);
     }
 
     public CombinedScanTask getTask() {

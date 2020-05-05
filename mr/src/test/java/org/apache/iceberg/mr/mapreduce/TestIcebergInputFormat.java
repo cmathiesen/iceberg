@@ -40,138 +40,66 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.iceberg.AppendFiles;
-import org.apache.iceberg.AssertHelpers;
 import org.apache.iceberg.DataFile;
-import org.apache.iceberg.DataFiles;
 import org.apache.iceberg.FileFormat;
-import org.apache.iceberg.Files;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
-import org.apache.iceberg.StructLike;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableProperties;
-import org.apache.iceberg.TestHelpers.Row;
-import org.apache.iceberg.avro.Avro;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.RandomGenericData;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.data.avro.DataWriter;
-import org.apache.iceberg.data.orc.GenericOrcWriter;
-import org.apache.iceberg.data.parquet.GenericParquetWriter;
 import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.hadoop.HadoopCatalog;
-import org.apache.iceberg.hadoop.HadoopTables;
-import org.apache.iceberg.io.FileAppender;
-import org.apache.iceberg.orc.ORC;
-import org.apache.iceberg.parquet.Parquet;
+import org.apache.iceberg.mr.BaseInputFormatTest;
+import org.apache.iceberg.mr.InputFormatConfig;
+import org.apache.iceberg.mr.TestHelpers.Row;
 import org.apache.iceberg.types.TypeUtil;
 import org.apache.iceberg.types.Types;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static org.apache.iceberg.types.Types.NestedField.required;
+import static org.apache.iceberg.mr.TestHelpers.writeFile;
 
 @RunWith(Parameterized.class)
-public class TestIcebergInputFormat {
-  static final Schema SCHEMA = new Schema(
-      required(1, "data", Types.StringType.get()),
-      required(2, "id", Types.LongType.get()),
-      required(3, "date", Types.StringType.get()));
-
-  static final PartitionSpec SPEC = PartitionSpec.builderFor(SCHEMA)
-      .identity("date")
-      .bucket("id", 1)
-      .build();
-
-  @Rule
-  public TemporaryFolder temp = new TemporaryFolder();
-  private HadoopTables tables;
-  private Configuration conf;
-
-  @Parameterized.Parameters
-  public static Object[][] parameters() {
-    return new Object[][]{
-        new Object[]{"parquet"},
-        new Object[]{"avro"},
-        new Object[]{"orc"}
-    };
-  }
-
-  private final FileFormat format;
+public class TestIcebergInputFormat extends BaseInputFormatTest {
 
   public TestIcebergInputFormat(String format) {
-    this.format = FileFormat.valueOf(format.toUpperCase(Locale.ENGLISH));
+    this.fileFormat = FileFormat.valueOf(format.toUpperCase(Locale.ENGLISH));
   }
 
-  @Before
-  public void before() {
-    conf = new Configuration();
-    tables = new HadoopTables(conf);
-  }
-
-  @Test
-  public void testUnpartitionedTable() throws Exception {
-    File location = temp.newFolder(format.name());
-    Assert.assertTrue(location.delete());
-    Table table = tables.create(SCHEMA, PartitionSpec.unpartitioned(),
-                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, format.name()),
-                                location.toString());
-    List<Record> expectedRecords = RandomGenericData.generate(table.schema(), 1, 0L);
-    DataFile dataFile = writeFile(table, null, format, expectedRecords);
-    table.newAppend()
-         .appendFile(dataFile)
-         .commit();
+  @Override
+  protected void runAndValidate(File tableLocation, List<Record> expectedRecords) throws IOException {
     Job job = Job.getInstance(conf);
-    IcebergInputFormat.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
-    configBuilder.readFrom(location.toString());
+    InputFormatConfig.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
+    configBuilder.readFrom(tableLocation.toString());
     validate(job, expectedRecords);
   }
 
-  @Test
-  public void testPartitionedTable() throws Exception {
-    File location = temp.newFolder(format.name());
-    Assert.assertTrue(location.delete());
-    Table table = tables.create(SCHEMA, SPEC,
-                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, format.name()),
-                                location.toString());
-    List<Record> expectedRecords = RandomGenericData.generate(table.schema(), 1, 0L);
-    expectedRecords.get(0).set(2, "2020-03-20");
-    DataFile dataFile = writeFile(table, Row.of("2020-03-20", 0), format, expectedRecords);
-    table.newAppend()
-         .appendFile(dataFile)
-         .commit();
-
-    Job job = Job.getInstance(conf);
-    IcebergInputFormat.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
-    configBuilder.readFrom(location.toString());
-    validate(job, expectedRecords);
-  }
-
+  //TODO: try move as many methods below into base class (once functionality is implemented in
+  //      mapred InputFormat)
   @Test
   public void testFilterExp() throws Exception {
-    File location = temp.newFolder(format.name());
+    File location = temp.newFolder(fileFormat.name());
     Assert.assertTrue(location.delete());
     Table table = tables.create(SCHEMA, SPEC,
-                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, format.name()),
+                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, fileFormat.name()),
                                 location.toString());
     List<Record> expectedRecords = RandomGenericData.generate(table.schema(), 2, 0L);
     expectedRecords.get(0).set(2, "2020-03-20");
     expectedRecords.get(1).set(2, "2020-03-20");
-    DataFile dataFile1 = writeFile(table, Row.of("2020-03-20", 0), format, expectedRecords);
-    DataFile dataFile2 = writeFile(table, Row.of("2020-03-21", 0), format,
+    DataFile dataFile1 = writeFile(temp.newFile(), table, Row.of("2020-03-20", 0), fileFormat, expectedRecords);
+    DataFile dataFile2 = writeFile(temp.newFile(), table, Row.of("2020-03-21", 0), fileFormat,
                                    RandomGenericData.generate(table.schema(), 2, 0L));
     table.newAppend()
          .appendFile(dataFile1)
          .appendFile(dataFile2)
          .commit();
     Job job = Job.getInstance(conf);
-    IcebergInputFormat.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
+    InputFormatConfig.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
     configBuilder.readFrom(location.toString())
                  .filter(Expressions.equal("date", "2020-03-20"));
     validate(job, expectedRecords);
@@ -179,47 +107,61 @@ public class TestIcebergInputFormat {
 
   @Test
   public void testResiduals() throws Exception {
-    File location = temp.newFolder(format.name());
+    File location = temp.newFolder(fileFormat.name());
     Assert.assertTrue(location.delete());
     Table table = tables.create(SCHEMA, SPEC,
-                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, format.name()),
+                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, fileFormat.name()),
                                 location.toString());
-    List<Record> expectedRecords = RandomGenericData.generate(table.schema(), 2, 0L);
-    expectedRecords.get(0).set(2, "2020-03-20");
-    expectedRecords.get(1).set(2, "2020-03-20");
-    DataFile dataFile = writeFile(table, Row.of("2020-03-20", 0), format, expectedRecords);
+    List<Record> writeRecords = RandomGenericData.generate(table.schema(), 2, 0L);
+    writeRecords.get(0).set(1, 123L);
+    writeRecords.get(0).set(2, "2020-03-20");
+    writeRecords.get(1).set(1, 456L);
+    writeRecords.get(1).set(2, "2020-03-20");
+
+    List<Record> expectedRecords = new ArrayList<>();
+    expectedRecords.add(writeRecords.get(0));
+
+    DataFile dataFile1 = writeFile(temp.newFile(), table, Row.of("2020-03-20", 0), fileFormat, writeRecords);
+    DataFile dataFile2 = writeFile(temp.newFile(), table, Row.of("2020-03-21", 0), fileFormat,
+        RandomGenericData.generate(table.schema(), 2, 0L));
     table.newAppend()
-         .appendFile(dataFile)
+         .appendFile(dataFile1)
+         .appendFile(dataFile2)
          .commit();
     Job job = Job.getInstance(conf);
-    IcebergInputFormat.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
+    InputFormatConfig.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
     configBuilder.readFrom(location.toString())
-                 .filter(Expressions.and(
-                     Expressions.equal("date", "2020-03-20"),
-                     Expressions.equal("id", 0)));
+        .filter(Expressions.and(
+            Expressions.equal("date", "2020-03-20"),
+            Expressions.equal("id", 123)));
+    validate(job, expectedRecords);
 
-    AssertHelpers.assertThrows(
-        "Residuals are not evaluated today for Iceberg Generics In memory model",
-        UnsupportedOperationException.class, "Filter expression ref(name=\"id\") == 0 is not completely satisfied.",
-        () -> validate(job, expectedRecords));
+    // skip residual filtering
+    job = Job.getInstance(conf);
+    configBuilder = IcebergInputFormat.configure(job);
+    configBuilder.skipResidualFiltering().readFrom(location.toString())
+        .filter(Expressions.and(
+            Expressions.equal("date", "2020-03-20"),
+            Expressions.equal("id", 123)));
+    validate(job, writeRecords);
   }
 
   @Test
   public void testProjection() throws Exception {
-    File location = temp.newFolder(format.name());
+    File location = temp.newFolder(fileFormat.name());
     Assert.assertTrue(location.delete());
     Schema projectedSchema = TypeUtil.select(SCHEMA, ImmutableSet.of(1));
     Table table = tables.create(SCHEMA, SPEC,
-                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, format.name()),
+                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, fileFormat.name()),
                                 location.toString());
     List<Record> inputRecords = RandomGenericData.generate(table.schema(), 1, 0L);
-    DataFile dataFile = writeFile(table, Row.of("2020-03-20", 0), format, inputRecords);
+    DataFile dataFile = writeFile(temp.newFile(), table, Row.of("2020-03-20", 0), fileFormat, inputRecords);
     table.newAppend()
          .appendFile(dataFile)
          .commit();
 
     Job job = Job.getInstance(conf);
-    IcebergInputFormat.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
+    InputFormatConfig.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
     configBuilder
         .readFrom(location.toString())
         .project(projectedSchema);
@@ -240,10 +182,10 @@ public class TestIcebergInputFormat {
 
   @Test
   public void testIdentityPartitionProjections() throws Exception {
-    File location = temp.newFolder(format.name());
+    File location = temp.newFolder(fileFormat.name());
     Assert.assertTrue(location.delete());
     Table table = tables.create(LOG_SCHEMA, IDENTITY_PARTITION_SPEC,
-                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, format.name()),
+                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, fileFormat.name()),
                                 location.toString());
 
     List<Record> inputRecords = RandomGenericData.generate(LOG_SCHEMA, 10, 0);
@@ -252,7 +194,8 @@ public class TestIcebergInputFormat {
     for (Record record : inputRecords) {
       record.set(1, "2020-03-2" + idx);
       record.set(2, idx.toString());
-      append.appendFile(writeFile(table, Row.of("2020-03-2" + idx, idx.toString()), format, ImmutableList.of(record)));
+      append.appendFile(writeFile(temp.newFile(), table, Row.of("2020-03-2" + idx, idx.toString()),
+                        fileFormat, ImmutableList.of(record)));
       idx += 1;
     }
     append.commit();
@@ -293,7 +236,7 @@ public class TestIcebergInputFormat {
   private void validateIdentityPartitionProjections(
       String tablePath, Schema projectedSchema, List<Record> inputRecords) throws Exception {
     Job job = Job.getInstance(conf);
-    IcebergInputFormat.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
+    InputFormatConfig.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
     configBuilder
         .readFrom(tablePath)
         .project(projectedSchema);
@@ -313,22 +256,23 @@ public class TestIcebergInputFormat {
 
   @Test
   public void testSnapshotReads() throws Exception {
-    File location = temp.newFolder(format.name());
+    File location = temp.newFolder(fileFormat.name());
     Assert.assertTrue(location.delete());
     Table table = tables.create(SCHEMA, PartitionSpec.unpartitioned(),
-                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, format.name()),
+                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, fileFormat.name()),
                                 location.toString());
     List<Record> expectedRecords = RandomGenericData.generate(table.schema(), 1, 0L);
     table.newAppend()
-         .appendFile(writeFile(table, null, format, expectedRecords))
+         .appendFile(writeFile(temp.newFile(), table, null, fileFormat, expectedRecords))
          .commit();
     long snapshotId = table.currentSnapshot().snapshotId();
     table.newAppend()
-         .appendFile(writeFile(table, null, format, RandomGenericData.generate(table.schema(), 1, 0L)))
+         .appendFile(writeFile(temp.newFile(), table, null, fileFormat,
+                     RandomGenericData.generate(table.schema(), 1, 0L)))
          .commit();
 
     Job job = Job.getInstance(conf);
-    IcebergInputFormat.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
+    InputFormatConfig.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
     configBuilder
         .readFrom(location.toString())
         .snapshotId(snapshotId);
@@ -338,17 +282,17 @@ public class TestIcebergInputFormat {
 
   @Test
   public void testLocality() throws Exception {
-    File location = temp.newFolder(format.name());
+    File location = temp.newFolder(fileFormat.name());
     Assert.assertTrue(location.delete());
     Table table = tables.create(SCHEMA, PartitionSpec.unpartitioned(),
-                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, format.name()),
+                                ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, fileFormat.name()),
                                 location.toString());
     List<Record> expectedRecords = RandomGenericData.generate(table.schema(), 1, 0L);
     table.newAppend()
-         .appendFile(writeFile(table, null, format, expectedRecords))
+         .appendFile(writeFile(temp.newFile(), table, null, fileFormat, expectedRecords))
          .commit();
     Job job = Job.getInstance(conf);
-    IcebergInputFormat.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
+    InputFormatConfig.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
     configBuilder.readFrom(location.toString());
 
     for (InputSplit split : splits(job.getConfiguration())) {
@@ -376,16 +320,16 @@ public class TestIcebergInputFormat {
     Catalog catalog = new HadoopCatalogFunc().apply(conf);
     TableIdentifier tableIdentifier = TableIdentifier.of("db", "t");
     Table table = catalog.createTable(tableIdentifier, SCHEMA, SPEC,
-                                      ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, format.name()));
+                                      ImmutableMap.of(TableProperties.DEFAULT_FILE_FORMAT, fileFormat.name()));
     List<Record> expectedRecords = RandomGenericData.generate(table.schema(), 1, 0L);
     expectedRecords.get(0).set(2, "2020-03-20");
-    DataFile dataFile = writeFile(table, Row.of("2020-03-20", 0), format, expectedRecords);
+    DataFile dataFile = writeFile(temp.newFile(), table, Row.of("2020-03-20", 0), fileFormat, expectedRecords);
     table.newAppend()
          .appendFile(dataFile)
          .commit();
 
     Job job = Job.getInstance(conf);
-    IcebergInputFormat.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
+    InputFormatConfig.ConfigBuilder configBuilder = IcebergInputFormat.configure(job);
     configBuilder
         .catalogFunc(HadoopCatalogFunc.class)
         .readFrom(tableIdentifier.toString());
@@ -429,50 +373,4 @@ public class TestIcebergInputFormat {
     return records;
   }
 
-  private DataFile writeFile(
-      Table table, StructLike partitionData, FileFormat fileFormat, List<Record> records) throws IOException {
-    File file = temp.newFile();
-    Assert.assertTrue(file.delete());
-    FileAppender<Record> appender;
-    switch (fileFormat) {
-      case AVRO:
-        appender = Avro.write(Files.localOutput(file))
-            .schema(table.schema())
-            .createWriterFunc(DataWriter::create)
-            .named(fileFormat.name())
-            .build();
-        break;
-      case PARQUET:
-        appender = Parquet.write(Files.localOutput(file))
-            .schema(table.schema())
-            .createWriterFunc(GenericParquetWriter::buildWriter)
-            .named(fileFormat.name())
-            .build();
-        break;
-      case ORC:
-        appender = ORC.write(Files.localOutput(file))
-            .schema(table.schema())
-            .createWriterFunc(GenericOrcWriter::buildWriter)
-            .build();
-        break;
-      default:
-        throw new UnsupportedOperationException("Cannot write format: " + fileFormat);
-    }
-
-    try {
-      appender.addAll(records);
-    } finally {
-      appender.close();
-    }
-
-    DataFiles.Builder builder = DataFiles.builder(table.spec())
-        .withPath(file.toString())
-        .withFormat(format)
-        .withFileSizeInBytes(file.length())
-        .withMetrics(appender.metrics());
-    if (partitionData != null) {
-      builder.withPartition(partitionData);
-    }
-    return builder.build();
-  }
 }
