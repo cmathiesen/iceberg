@@ -60,7 +60,7 @@ subprojects {
     publications {
       shadow(MavenPublication) {
           publication -> project.shadow.component(publication)
-          version '0.7.1-incubating'
+          version '0.7.2-incubating'
           groupId = 'org.apache.iceberg'
           pom {
             name = 'Apache Iceberg (incubating)'
