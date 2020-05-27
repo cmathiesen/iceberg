@@ -19,10 +19,6 @@
 
 package org.apache.iceberg.orc;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,6 +27,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
+import org.apache.iceberg.relocated.com.google.common.collect.ImmutableMap;
+import org.apache.iceberg.relocated.com.google.common.collect.Lists;
+import org.apache.iceberg.relocated.com.google.common.collect.Maps;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.TypeUtil;
 import org.apache.iceberg.types.Types;
@@ -308,7 +308,7 @@ public final class ORCSchemaUtil {
           orcType = convert(fieldId, type, false);
         }
     }
-
+    orcType.setAttribute(ICEBERG_ID_ATTRIBUTE, fieldId.toString());
     return orcType;
   }
 
@@ -380,6 +380,12 @@ public final class ORCSchemaUtil {
   private static Optional<Integer> icebergID(TypeDescription orcType) {
     return Optional.ofNullable(orcType.getAttributeValue(ICEBERG_ID_ATTRIBUTE))
         .map(Integer::parseInt);
+  }
+
+  static int fieldId(TypeDescription orcType) {
+    String idStr = orcType.getAttributeValue(ICEBERG_ID_ATTRIBUTE);
+    Preconditions.checkNotNull(idStr, "Missing expected '%s' property", ICEBERG_ID_ATTRIBUTE);
+    return Integer.parseInt(idStr);
   }
 
   private static boolean isRequired(TypeDescription orcType) {
@@ -505,5 +511,12 @@ public final class ORCSchemaUtil {
     }
 
     return maxId;
+  }
+
+  /**
+   * Generates mapping from field IDs to ORC qualified names. See {@link IdToOrcName} for details.
+   */
+  public static Map<Integer, String> idToOrcName(Schema schema) {
+    return TypeUtil.visit(schema, new IdToOrcName());
   }
 }

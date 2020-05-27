@@ -21,10 +21,6 @@ package org.apache.iceberg;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -45,6 +41,10 @@ import org.apache.iceberg.exceptions.RuntimeIOException;
 import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.InputFile;
 import org.apache.iceberg.io.OutputFile;
+import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
+import org.apache.iceberg.relocated.com.google.common.collect.ImmutableList;
+import org.apache.iceberg.relocated.com.google.common.collect.Lists;
+import org.apache.iceberg.relocated.com.google.common.collect.Sets;
 import org.apache.iceberg.util.JsonUtil;
 
 public class TableMetadataParser {
@@ -212,6 +212,14 @@ public class TableMetadataParser {
     generator.writeEndArray();
 
     generator.writeEndObject();
+  }
+
+  /**
+   * @deprecated will be removed in 0.9.0; use read(FileIO, InputFile) instead.
+   */
+  @Deprecated
+  public static TableMetadata read(TableOperations ops, InputFile file) {
+    return read(ops.io(), file);
   }
 
   public static TableMetadata read(FileIO io, String path) {

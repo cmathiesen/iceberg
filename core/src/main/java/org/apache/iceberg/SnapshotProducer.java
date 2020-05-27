@@ -21,10 +21,6 @@ package org.apache.iceberg;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -34,9 +30,14 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import org.apache.iceberg.events.Listeners;
 import org.apache.iceberg.exceptions.CommitFailedException;
 import org.apache.iceberg.exceptions.RuntimeIOException;
 import org.apache.iceberg.io.OutputFile;
+import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
+import org.apache.iceberg.relocated.com.google.common.collect.ImmutableMap;
+import org.apache.iceberg.relocated.com.google.common.collect.Lists;
+import org.apache.iceberg.relocated.com.google.common.collect.Sets;
 import org.apache.iceberg.util.Exceptions;
 import org.apache.iceberg.util.Tasks;
 import org.apache.iceberg.util.ThreadPools;
@@ -293,6 +294,19 @@ abstract class SnapshotProducer<ThisT> implements SnapshotUpdate<ThisT> {
     } catch (RuntimeException e) {
       LOG.warn("Failed to load committed table metadata, skipping manifest clean-up", e);
     }
+
+    notifyListeners();
+  }
+
+  private void notifyListeners() {
+    try {
+      Object event = updateEvent();
+      if (event != null) {
+        Listeners.notifyAll(event);
+      }
+    } catch (RuntimeException e) {
+      LOG.warn("Failed to notify listeners", e);
+    }
   }
 
   protected void cleanAll() {
@@ -379,8 +393,8 @@ abstract class SnapshotProducer<ThisT> implements SnapshotUpdate<ThisT> {
       }
 
       return new GenericManifestFile(manifest.path(), manifest.length(), manifest.partitionSpecId(),
-          manifest.sequenceNumber(), manifest.minSequenceNumber(), snapshotId, addedFiles, addedRows, existingFiles,
-          existingRows, deletedFiles, deletedRows, stats.summaries());
+          ManifestContent.DATA, manifest.sequenceNumber(), manifest.minSequenceNumber(), snapshotId,
+          addedFiles, addedRows, existingFiles, existingRows, deletedFiles, deletedRows, stats.summaries());
 
     } catch (IOException e) {
       throw new RuntimeIOException(e, "Failed to read manifest: %s", manifest.path());

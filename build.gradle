@@ -84,10 +84,6 @@ subprojects {
 
   dependencies {
     compile 'org.slf4j:slf4j-api'
-    compile('com.google.guava:guava') {
-      // may be LGPL - use ALv2 findbugs-annotations instead
-      exclude group: 'com.google.code.findbugs'
-    }
     compile 'com.github.stephenc.findbugs:findbugs-annotations:1.3.9-1'
 
     testCompile 'junit:junit'
@@ -103,10 +99,46 @@ subprojects {
   }
 }
 
-apply from: 'baseline.gradle'
-apply from: 'deploy.gradle'
-apply from: 'tasks.gradle'
-apply from: 'jmh.gradle'
+project(':iceberg-bundled-guava') {
+  apply plugin: 'com.github.johnrengelman.shadow'
+
+  tasks.jar.dependsOn tasks.shadowJar
+
+  dependencies {    
+    compileOnly('com.google.guava:guava') {
+      exclude group: 'com.google.code.findbugs'
+      // may be LGPL - use ALv2 findbugs-annotations instead
+      exclude group: 'com.google.errorprone'
+      exclude group: 'com.google.j2objc'
+    }
+  }
+
+  shadowJar {
+    classifier null
+    configurations = [project.configurations.compileOnly]
+    zip64 true
+
+    // include the LICENSE and NOTICE files for the shaded Jar
+    from(projectDir) {
+      include 'LICENSE'
+      include 'NOTICE'
+    }
+
+    dependencies {
+      exclude(dependency('com.github.stephenc.findbugs:findbugs-annotations'))
+      exclude(dependency('org.slf4j:slf4j-api'))
+      exclude(dependency('org.checkerframework:checker-qual'))
+    }
+
+    relocate 'com.google.common', 'org.apache.iceberg.relocated.com.google.common'
+
+    minimize()
+  }
+
+  jar {
+    classifier 'empty'
+  }
+}
 
 project(':iceberg-api') {
   apply plugin: 'com.github.johnrengelman.shadow'
@@ -116,6 +148,7 @@ project(':iceberg-api') {
   tasks.javadocJar.dependsOn tasks.shadowJar
 
   dependencies {
+    compile project(path: ':iceberg-bundled-guava', configuration: 'shadow')
     testCompile "org.apache.avro:avro"
     testCompile 'joda-time:joda-time'
   }
@@ -151,8 +184,12 @@ project(':iceberg-api') {
   }
 }
 
-project(':iceberg-common') {}
-
+project(':iceberg-common') {
+  dependencies {
+    compile project(path: ':iceberg-bundled-guava', configuration: 'shadow')
+  }
+}
+     
 project(':iceberg-core') {
   apply plugin: 'com.github.johnrengelman.shadow'
 
@@ -443,9 +480,11 @@ project(':iceberg-arrow') {
     compile("org.apache.arrow:arrow-vector") {
       exclude group: 'io.netty', module: 'netty-buffer'
       exclude group: 'io.netty', module: 'netty-common'
+      exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
     compile("org.apache.arrow:arrow-memory") {
       exclude group: 'io.netty', module: 'netty-common'
+      exclude group: 'com.google.code.findbugs', module: 'jsr305'
     }
   }
 }
@@ -526,12 +565,11 @@ project(':iceberg-pig') {
 project(':iceberg-spark-runtime') {
   apply plugin: 'com.github.johnrengelman.shadow'
 
-  tasks.assemble.dependsOn tasks.shadowJar
-  tasks.install.dependsOn tasks.shadowJar
-  tasks.javadocJar.dependsOn tasks.shadowJar
+  tasks.jar.dependsOn tasks.shadowJar
 
   configurations {
-    compileOnly {
+    compile {
+      exclude group: 'org.apache.spark'
       // included in Spark
       exclude group: 'org.slf4j'
       exclude group: 'org.apache.commons'
@@ -539,16 +577,17 @@ project(':iceberg-spark-runtime') {
       exclude group: 'commons-codec'
       exclude group: 'org.xerial.snappy'
       exclude group: 'javax.xml.bind'
+      exclude group: 'javax.annotation'
     }
   }
 
   dependencies {
-    compileOnly project(':iceberg-spark')
+    compile project(':iceberg-spark')
+    compile 'org.apache.spark:spark-hive_2.11'
   }
 
   shadowJar {
-    // shade compileOnly dependencies to avoid including in transitive dependencies
-    configurations = [project.configurations.compileOnly]
+    configurations = [project.configurations.compile]
 
     zip64 true
 
@@ -575,8 +614,13 @@ project(':iceberg-spark-runtime') {
     // relocate Arrow and related deps to shade Iceberg specific version
     relocate 'io.netty.buffer', 'org.apache.iceberg.shaded.io.netty.buffer'
     relocate 'org.apache.arrow', 'org.apache.iceberg.shaded.org.apache.arrow'
+    relocate 'com.carrotsearch', 'org.apache.iceberg.shaded.com.carrotsearch'
 
-    archiveName = "iceberg-spark-runtime-${version}.${extension}"
+    classifier null
+  }
+
+  jar {
+    classifier = 'empty'
   }
 }
 
@@ -614,3 +658,9 @@ String getJavadocVersion() {
     throw new Exception("Neither version.txt nor git version exists")
   }
 }
+
+apply from: 'baseline.gradle'
+apply from: 'deploy.gradle'
+apply from: 'tasks.gradle'
+apply from: 'jmh.gradle'
+

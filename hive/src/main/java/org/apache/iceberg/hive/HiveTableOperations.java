@@ -19,8 +19,6 @@
 
 package org.apache.iceberg.hive;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
@@ -56,6 +54,8 @@ import org.apache.iceberg.exceptions.CommitFailedException;
 import org.apache.iceberg.exceptions.NoSuchTableException;
 import org.apache.iceberg.hadoop.HadoopFileIO;
 import org.apache.iceberg.io.FileIO;
+import org.apache.iceberg.relocated.com.google.common.collect.ImmutableMap;
+import org.apache.iceberg.relocated.com.google.common.collect.Lists;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -296,13 +296,18 @@ public class HiveTableOperations extends BaseMetastoreTableOperations {
   private void unlock(Optional<Long> lockId) {
     if (lockId.isPresent()) {
       try {
-        metaClients.run(client -> {
-          client.unlock(lockId.get());
-          return null;
-        });
+        doUnlock(lockId.get());
       } catch (Exception e) {
-        throw new RuntimeException(String.format("Failed to unlock %s.%s", database, tableName), e);
+        LOG.warn("Failed to unlock {}.{}", database, tableName, e);
       }
     }
+  }
+
+  // visible for testing
+  protected void doUnlock(long lockId) throws TException, InterruptedException {
+    metaClients.run(client -> {
+      client.unlock(lockId);
+      return null;
+    });
   }
 }

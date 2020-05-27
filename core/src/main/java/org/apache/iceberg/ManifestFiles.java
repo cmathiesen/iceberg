@@ -19,13 +19,13 @@
 
 package org.apache.iceberg;
 
-import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.util.Map;
 import org.apache.iceberg.exceptions.RuntimeIOException;
 import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.InputFile;
 import org.apache.iceberg.io.OutputFile;
+import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
 
 public class ManifestFiles {
   private ManifestFiles() {
@@ -71,8 +71,7 @@ public class ManifestFiles {
    * @return a manifest writer
    */
   public static ManifestWriter write(PartitionSpec spec, OutputFile outputFile) {
-    // always use a v2 writer to preserve sequence numbers, but use null for sequence number so appends inherit
-    return write(2, spec, outputFile, null);
+    return write(1, spec, outputFile, null);
   }
 
   /**
@@ -84,7 +83,7 @@ public class ManifestFiles {
    * @param snapshotId a snapshot ID for the manifest entries, or null for an inherited ID
    * @return a manifest writer
    */
-  static ManifestWriter write(int formatVersion, PartitionSpec spec, OutputFile outputFile, Long snapshotId) {
+  public static ManifestWriter write(int formatVersion, PartitionSpec spec, OutputFile outputFile, Long snapshotId) {
     switch (formatVersion) {
       case 1:
         return new ManifestWriter.V1Writer(spec, outputFile, snapshotId);

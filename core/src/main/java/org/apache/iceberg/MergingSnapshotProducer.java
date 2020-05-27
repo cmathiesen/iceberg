@@ -19,13 +19,6 @@
 
 package org.apache.iceberg;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Arrays;
@@ -34,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.iceberg.ManifestEntry.Status;
+import org.apache.iceberg.events.CreateSnapshotEvent;
 import org.apache.iceberg.exceptions.RuntimeIOException;
 import org.apache.iceberg.exceptions.ValidationException;
 import org.apache.iceberg.expressions.Evaluator;
@@ -44,6 +38,13 @@ import org.apache.iceberg.expressions.Projections;
 import org.apache.iceberg.expressions.StrictMetricsEvaluator;
 import org.apache.iceberg.io.InputFile;
 import org.apache.iceberg.io.OutputFile;
+import org.apache.iceberg.relocated.com.google.common.base.Joiner;
+import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
+import org.apache.iceberg.relocated.com.google.common.collect.ImmutableList;
+import org.apache.iceberg.relocated.com.google.common.collect.Iterables;
+import org.apache.iceberg.relocated.com.google.common.collect.Lists;
+import org.apache.iceberg.relocated.com.google.common.collect.Maps;
+import org.apache.iceberg.relocated.com.google.common.collect.Sets;
 import org.apache.iceberg.util.BinPacking.ListPacker;
 import org.apache.iceberg.util.CharSequenceWrapper;
 import org.apache.iceberg.util.ManifestFileUtil;
@@ -78,6 +79,7 @@ abstract class MergingSnapshotProducer<ThisT> extends SnapshotProducer<ThisT> {
     }
   }
 
+  private final String tableName;
   private final TableOperations ops;
   private final PartitionSpec spec;
   private final long manifestTargetSizeBytes;
@@ -116,8 +118,9 @@ abstract class MergingSnapshotProducer<ThisT> extends SnapshotProducer<ThisT> {
 
   private boolean filterUpdated = false; // used to clear caches of filtered and merged manifests
 
-  MergingSnapshotProducer(TableOperations ops) {
+  MergingSnapshotProducer(String tableName, TableOperations ops) {
     super(ops);
+    this.tableName = tableName;
     this.ops = ops;
     this.spec = ops.current().spec();
     this.manifestTargetSizeBytes = ops.current()
@@ -314,6 +317,18 @@ abstract class MergingSnapshotProducer<ThisT> extends SnapshotProducer<ThisT> {
     } catch (IOException e) {
       throw new RuntimeIOException(e, "Failed to create snapshot manifest list");
     }
+  }
+
+  @Override
+  public Object updateEvent() {
+    long snapshotId = snapshotId();
+    long sequenceNumber = ops.refresh().snapshot(snapshotId).sequenceNumber();
+    return new CreateSnapshotEvent(
+        tableName,
+        operation(),
+        snapshotId,
+        sequenceNumber,
+        summary());
   }
 
   private ManifestFile[] filterManifests(StrictMetricsEvaluator metricsEvaluator, List<ManifestFile> manifests)

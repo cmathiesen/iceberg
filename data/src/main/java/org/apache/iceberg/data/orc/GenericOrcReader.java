@@ -19,9 +19,6 @@
 
 package org.apache.iceberg.data.orc;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -39,7 +36,10 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.orc.ORCSchemaUtil;
-import org.apache.iceberg.orc.OrcValueReader;
+import org.apache.iceberg.orc.OrcRowReader;
+import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
+import org.apache.iceberg.relocated.com.google.common.collect.Lists;
+import org.apache.iceberg.relocated.com.google.common.collect.Maps;
 import org.apache.iceberg.types.Types;
 import org.apache.orc.TypeDescription;
 import org.apache.orc.storage.ql.exec.vector.BytesColumnVector;
@@ -56,7 +56,7 @@ import org.apache.orc.storage.ql.exec.vector.VectorizedRowBatch;
 /**
  * ORC reader for Generic Record.
  */
-public class GenericOrcReader implements OrcValueReader<Record> {
+public class GenericOrcReader implements OrcRowReader<Record> {
 
   private final Schema schema;
   private final List<TypeDescription> columns;
@@ -82,7 +82,7 @@ public class GenericOrcReader implements OrcValueReader<Record> {
     return newConverters;
   }
 
-  public static OrcValueReader<Record> buildReader(Schema expectedSchema, TypeDescription fileSchema) {
+  public static OrcRowReader<Record> buildReader(Schema expectedSchema, TypeDescription fileSchema) {
     return new GenericOrcReader(expectedSchema, fileSchema);
   }
 
@@ -101,7 +101,7 @@ public class GenericOrcReader implements OrcValueReader<Record> {
       if (!vector.noNulls && vector.isNull[rowIndex]) {
         return null;
       } else {
-        return convertNonNullValue(vector, row);
+        return convertNonNullValue(vector, rowIndex);
       }
     }
 
