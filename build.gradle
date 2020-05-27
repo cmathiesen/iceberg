@@ -99,10 +99,46 @@ subprojects {
   }
 }
 
-apply from: 'baseline.gradle'
-apply from: 'deploy.gradle'
-apply from: 'tasks.gradle'
-apply from: 'jmh.gradle'
+project(':iceberg-bundled-guava') {
+  apply plugin: 'com.github.johnrengelman.shadow'
+
+  tasks.jar.dependsOn tasks.shadowJar
+
+  dependencies {    
+    compileOnly('com.google.guava:guava') {
+      exclude group: 'com.google.code.findbugs'
+      // may be LGPL - use ALv2 findbugs-annotations instead
+      exclude group: 'com.google.errorprone'
+      exclude group: 'com.google.j2objc'
+    }
+  }
+
+  shadowJar {
+    classifier null
+    configurations = [project.configurations.compileOnly]
+    zip64 true
+
+    // include the LICENSE and NOTICE files for the shaded Jar
+    from(projectDir) {
+      include 'LICENSE'
+      include 'NOTICE'
+    }
+
+    dependencies {
+      exclude(dependency('com.github.stephenc.findbugs:findbugs-annotations'))
+      exclude(dependency('org.slf4j:slf4j-api'))
+      exclude(dependency('org.checkerframework:checker-qual'))
+    }
+
+    relocate 'com.google.common', 'org.apache.iceberg.relocated.com.google.common'
+
+    minimize()
+  }
+
+  jar {
+    classifier 'empty'
+  }
+}
 
 project(':iceberg-bundled-guava') {
   apply plugin: 'com.github.johnrengelman.shadow'
@@ -448,12 +484,11 @@ project(':iceberg-pig') {
 project(':iceberg-spark-runtime') {
   apply plugin: 'com.github.johnrengelman.shadow'
 
-  tasks.assemble.dependsOn tasks.shadowJar
-  tasks.install.dependsOn tasks.shadowJar
-  tasks.javadocJar.dependsOn tasks.shadowJar
+  tasks.jar.dependsOn tasks.shadowJar
 
   configurations {
-    compileOnly {
+    compile {
+      exclude group: 'org.apache.spark'
       // included in Spark
       exclude group: 'org.slf4j'
       exclude group: 'org.apache.commons'
@@ -466,12 +501,12 @@ project(':iceberg-spark-runtime') {
   }
 
   dependencies {
-    compileOnly project(':iceberg-spark')
+    compile project(':iceberg-spark')
+    compile 'org.apache.spark:spark-hive_2.11'
   }
 
   shadowJar {
-    // shade compileOnly dependencies to avoid including in transitive dependencies
-    configurations = [project.configurations.compileOnly]
+    configurations = [project.configurations.compile]
 
     zip64 true
 
@@ -479,7 +514,6 @@ project(':iceberg-spark-runtime') {
     from(projectDir) {
       include 'LICENSE'
       include 'NOTICE'
-      include 'DISCLAIMER'
     }
 
     // Relocate dependencies to avoid conflicts
@@ -501,7 +535,11 @@ project(':iceberg-spark-runtime') {
     relocate 'org.apache.arrow', 'org.apache.iceberg.shaded.org.apache.arrow'
     relocate 'com.carrotsearch', 'org.apache.iceberg.shaded.com.carrotsearch'
 
-    archiveName = "iceberg-spark-runtime-${version}.${extension}"
+    classifier null
+  }
+
+  jar {
+    classifier = 'empty'
   }
 }
 
@@ -539,3 +577,9 @@ String getJavadocVersion() {
     throw new Exception("Neither version.txt nor git version exists")
   }
 }
+
+apply from: 'baseline.gradle'
+apply from: 'deploy.gradle'
+apply from: 'tasks.gradle'
+apply from: 'jmh.gradle'
+
