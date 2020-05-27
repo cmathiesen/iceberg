@@ -140,44 +140,6 @@ project(':iceberg-bundled-guava') {
   }
 }
 
-project(':iceberg-bundled-guava') {
-  apply plugin: 'com.github.johnrengelman.shadow'
-  
-  tasks.javadoc.enabled = false
-  tasks.javadocJar.enabled = false
-  tasks.assemble.dependsOn tasks.shadowJar
-  tasks.install.dependsOn tasks.shadowJar
-  
-  dependencies {    
-    compileOnly('com.google.guava:guava') {
-      exclude group: 'com.google.code.findbugs'
-      // may be LGPL - use ALv2 findbugs-annotations instead
-      exclude group: 'com.google.errorprone'
-      exclude group: 'com.google.j2objc'
-    }
-  }
-  
-  shadowJar {
-    configurations = [project.configurations.compileOnly]
-    zip64 true
-
-    // include the LICENSE and NOTICE files for the shaded Jar
-    from(projectDir) {
-      include 'LICENSE'
-    }
-
-    dependencies {
-      exclude(dependency('com.github.stephenc.findbugs:findbugs-annotations'))
-      exclude(dependency('org.slf4j:slf4j-api'))
-      exclude(dependency('org.checkerframework:checker-qual'))
-    }
-
-    relocate 'com.google.common', 'org.apache.iceberg.relocated.com.google.common'
-
-    minimize()
-  }
-}
-
 project(':iceberg-api') {
   dependencies {
     compile project(path: ':iceberg-bundled-guava', configuration: 'shadow')
