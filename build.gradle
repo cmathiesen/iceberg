@@ -276,7 +276,7 @@ project(':iceberg-mr') {
       exclude group: 'org.apache.avro', module: 'avro'
     }
 
-    testCompile("com.klarna:hiverunner:4.1.0") {
+    testCompile("com.klarna:hiverunner:5.2.1") {
       exclude group: 'javax.jms', module: 'jms'
       exclude group: 'org.apache.hive', module: 'hive-exec'
       exclude group: 'org.codehaus.jettison', module: 'jettison'
