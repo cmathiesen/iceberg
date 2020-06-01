@@ -22,6 +22,9 @@ package org.apache.iceberg.mr.mapreduce;
 import com.klarna.hiverunner.HiveShell;
 import com.klarna.hiverunner.StandaloneHiveRunner;
 import com.klarna.hiverunner.annotations.HiveSQL;
+import java.util.Arrays;
+import java.util.List;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -31,8 +34,31 @@ public class TestHiveRunner {
   @HiveSQL(files = {}, autoStart = true)
   private HiveShell shell;
 
-  @Test
-  public void testHiveRunner() {
+  @Before
+  public void setupDatabase() {
+    shell.execute("CREATE DATABASE source_db");
+    shell.execute(new StringBuilder()
+            .append("CREATE TABLE source_db.test_table (")
+            .append("col_a STRING, col_b INT, col_c BOOLEAN")
+            .append(")")
+            .toString());
+  }
 
+  @Test
+  public void insertRowsFromCode() {
+    shell.insertInto("source_db", "test_table")
+            .withAllColumns()
+            .addRow("Value1", 1, true)
+            .addRow("Value2", 99, false)
+            .commit();
+
+    printResult(shell.executeStatement("select * from source_db.test_table"));
+  }
+
+  public void printResult(List<Object[]> result) {
+    System.out.println(String.format("Results: "));
+    for (Object[] row : result) {
+      System.out.println(Arrays.asList(row));
+    }
   }
 }

@@ -314,7 +314,6 @@ project(':iceberg-mr') {
       exclude group: 'javax.jms', module: 'jms'
       exclude group: 'org.apache.hive', module: 'hive-exec'
       exclude group: 'org.codehaus.jettison', module: 'jettison'
-      exclude group: 'org.apache.calcite'
       exclude group: 'org.apache.calcite.avatica'
       exclude group: 'com.fasterxml.jackson.core'
     }
@@ -328,12 +327,11 @@ project(':iceberg-mr') {
       exclude group: 'com.google.protobuf', module: 'protobuf-java'
       exclude group: 'org.apache.calcite.avatica'
       exclude group: 'com.google.code.findbugs', module: 'jsr305'
-      exclude group: 'org.apache.calcite'
       exclude group: 'com.fasterxml.jackson.core'
     }
 
     testCompile("org.apache.calcite:calcite-core")
-
+    testCompile("com.esotericsoftware.kryo:kryo:2.24.0")
     testCompile project(path: ':iceberg-data', configuration: 'testArtifacts')
     testCompile project(path: ':iceberg-api', configuration: 'testArtifacts')
     testCompile project(path: ':iceberg-core', configuration: 'testArtifacts')
