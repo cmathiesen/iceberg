@@ -50,6 +50,7 @@ import org.apache.iceberg.relocated.com.google.common.collect.Iterables;
 import org.apache.iceberg.relocated.com.google.common.collect.Lists;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
+import org.apache.iceberg.util.DateTimeUtil;
 import org.apache.iceberg.util.PartitionUtil;
 
 class TableScanIterable extends CloseableGroup implements CloseableIterable<Record> {
@@ -82,7 +83,6 @@ class TableScanIterable extends CloseableGroup implements CloseableIterable<Reco
     InputFile input = ops.io().newInputFile(task.file().path().toString());
     Map<Integer, ?> partition = PartitionUtil.constantsMap(task, TableScanIterable::convertConstant);
 
-    // TODO: join to partition data from the manifest file
     switch (task.file().format()) {
       case AVRO:
         Avro.ReadBuilder avro = Avro.read(input)
@@ -112,7 +112,7 @@ class TableScanIterable extends CloseableGroup implements CloseableIterable<Reco
       case ORC:
         ORC.ReadBuilder orc = ORC.read(input)
                 .project(projection)
-                .createReaderFunc(fileSchema -> GenericOrcReader.buildReader(projection, fileSchema))
+                .createReaderFunc(fileSchema -> GenericOrcReader.buildReader(projection, fileSchema, partition))
                 .split(task.start(), task.length())
                 .filter(task.residual());
 
