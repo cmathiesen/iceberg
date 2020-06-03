@@ -275,7 +275,6 @@ abstract class MergingSnapshotProducer<ThisT> extends SnapshotProducer<ThisT> {
         newManifests = Iterables.concat(appendManifests, rewrittenAppendManifests);
       }
 
-      // TODO: add sequence numbers here
       Iterable<ManifestFile> newManifestsWithMetadata = Iterables.transform(
           newManifests,
           manifest -> GenericManifestFile.copyOf(manifest).withSnapshotId(snapshotId()).build());
@@ -283,7 +282,7 @@ abstract class MergingSnapshotProducer<ThisT> extends SnapshotProducer<ThisT> {
       // filter any existing manifests
       List<ManifestFile> filtered;
       if (current != null) {
-        List<ManifestFile> manifests = current.manifests();
+        List<ManifestFile> manifests = current.dataManifests();
         filtered = Arrays.asList(filterManifests(metricsEvaluator, manifests));
       } else {
         filtered = ImmutableList.of();
@@ -304,6 +303,10 @@ abstract class MergingSnapshotProducer<ThisT> extends SnapshotProducer<ThisT> {
         }
       } else {
         Iterables.addAll(manifests, unmergedManifests);
+      }
+
+      if (current != null) {
+        manifests.addAll(current.deleteManifests());
       }
 
       ValidationException.check(!failMissingDeletePaths || deletedFiles.containsAll(deletePaths),
@@ -667,7 +670,7 @@ abstract class MergingSnapshotProducer<ThisT> extends SnapshotProducer<ThisT> {
       return mergeManifests.get(bin);
     }
 
-    ManifestWriter<DataFile> writer = newManifestWriter(ops.current().spec());
+    ManifestWriter<DataFile> writer = newManifestWriter(ops.current().spec(specId));
     try {
       for (ManifestFile manifest : bin) {
         try (ManifestReader reader = ManifestFiles.read(manifest, ops.io(), ops.current().specsById())) {
@@ -676,11 +679,11 @@ abstract class MergingSnapshotProducer<ThisT> extends SnapshotProducer<ThisT> {
               // suppress deletes from previous snapshots. only files deleted by this snapshot
               // should be added to the new manifest
               if (entry.snapshotId() == snapshotId()) {
-                writer.addEntry(entry);
+                writer.delete(entry);
               }
             } else if (entry.status() == Status.ADDED && entry.snapshotId() == snapshotId()) {
               // adds from this snapshot are still adds, otherwise they should be existing
-              writer.addEntry(entry);
+              writer.add(entry);
             } else {
               // add all files from the old manifest as existing files
               writer.existing(entry);
