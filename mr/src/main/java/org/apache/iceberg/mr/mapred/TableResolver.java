@@ -20,6 +20,7 @@
 package org.apache.iceberg.mr.mapred;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Properties;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
@@ -45,27 +46,26 @@ final class TableResolver {
 
   static Table resolveTableFromConfiguration(Configuration conf, Properties properties) throws IOException {
     String catalogName = properties.getProperty(InputFormatConfig.CATALOG_NAME, InputFormatConfig.HADOOP_TABLES);
-    String tableLocation = properties.getProperty(InputFormatConfig.TABLE_LOCATION);
-    String tableName = properties.getProperty(InputFormatConfig.TABLE_NAME);
-    Preconditions.checkNotNull(tableLocation, "Table location is not set.");
-    Preconditions.checkNotNull(tableName, "Table name is not set.");
+
     switch (catalogName) {
       case InputFormatConfig.HADOOP_TABLES:
+        String tableLocation = properties.getProperty(InputFormatConfig.TABLE_LOCATION);
+        Preconditions.checkNotNull(tableLocation, "Table location is not set.");
         HadoopTables tables = new HadoopTables(conf);
         return tables.load(tableLocation);
+
       case InputFormatConfig.HIVE_CATALOG:
+        String tableName = properties.getProperty(InputFormatConfig.TABLE_NAME);
+        Preconditions.checkNotNull(tableName, "Table name is not set.");
         //TODO Implement HiveCatalog
         return null;
       default:
-        throw new NoSuchTableException("Table does not exist at location: " + tableLocation);
+        throw new RuntimeException("Catalog " + catalogName + " not supported.");
     }
   }
 
   protected static String extractProperty(JobConf conf, String key) {
-    String value = conf.get(key);
-    if (value == null) {
-      throw new IllegalArgumentException("Property not set in JobConf: " + key);
-    }
-    return value;
+    return Optional.ofNullable(conf.get(key))
+                   .orElseThrow(() -> new IllegalArgumentException("Property not set in JobConf: " + key));
   }
 }
