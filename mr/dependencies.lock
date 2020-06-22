@@ -4547,14 +4547,14 @@
                 "org.apache.slider:slider-core"
             ]
         },
-        "com.esotericsoftware.kryo:kryo": {
-            "locked": "2.24.0",
-            "requested": "2.24.0"
+        "com.esotericsoftware:kryo-shaded": {
+            "locked": "4.0.2",
+            "requested": "4.0.2"
         },
-        "com.esotericsoftware.minlog:minlog": {
-            "locked": "1.2",
+        "com.esotericsoftware:minlog": {
+            "locked": "1.3.0",
             "transitive": [
-                "com.esotericsoftware.kryo:kryo"
+                "com.esotericsoftware:kryo-shaded"
             ]
         },
         "com.fasterxml.jackson.core:jackson-annotations": {
@@ -6495,9 +6495,9 @@
             "locked": "1.10.19"
         },
         "org.objenesis:objenesis": {
-            "locked": "2.1",
+            "locked": "2.5.1",
             "transitive": [
-                "com.esotericsoftware.kryo:kryo",
+                "com.esotericsoftware:kryo-shaded",
                 "org.mockito:mockito-core"
             ]
         },
@@ -6753,14 +6753,14 @@
                 "org.apache.slider:slider-core"
             ]
         },
-        "com.esotericsoftware.kryo:kryo": {
-            "locked": "2.24.0",
-            "requested": "2.24.0"
+        "com.esotericsoftware:kryo-shaded": {
+            "locked": "4.0.2",
+            "requested": "4.0.2"
         },
-        "com.esotericsoftware.minlog:minlog": {
-            "locked": "1.2",
+        "com.esotericsoftware:minlog": {
+            "locked": "1.3.0",
             "transitive": [
-                "com.esotericsoftware.kryo:kryo"
+                "com.esotericsoftware:kryo-shaded"
             ]
         },
         "com.fasterxml.jackson.core:jackson-annotations": {
@@ -8593,9 +8593,9 @@
             "locked": "1.10.19"
         },
         "org.objenesis:objenesis": {
-            "locked": "2.1",
+            "locked": "2.5.1",
             "transitive": [
-                "com.esotericsoftware.kryo:kryo"
+                "com.esotericsoftware:kryo-shaded"
             ]
         },
         "org.opentest4j:opentest4j": {
@@ -8845,14 +8845,14 @@
                 "org.apache.slider:slider-core"
             ]
         },
-        "com.esotericsoftware.kryo:kryo": {
-            "locked": "2.24.0",
-            "requested": "2.24.0"
+        "com.esotericsoftware:kryo-shaded": {
+            "locked": "4.0.2",
+            "requested": "4.0.2"
         },
-        "com.esotericsoftware.minlog:minlog": {
-            "locked": "1.2",
+        "com.esotericsoftware:minlog": {
+            "locked": "1.3.0",
             "transitive": [
-                "com.esotericsoftware.kryo:kryo"
+                "com.esotericsoftware:kryo-shaded"
             ]
         },
         "com.fasterxml.jackson.core:jackson-annotations": {
@@ -10793,9 +10793,9 @@
             "locked": "1.10.19"
         },
         "org.objenesis:objenesis": {
-            "locked": "2.1",
+            "locked": "2.5.1",
             "transitive": [
-                "com.esotericsoftware.kryo:kryo",
+                "com.esotericsoftware:kryo-shaded",
                 "org.mockito:mockito-core"
             ]
         },
@@ -11051,14 +11051,14 @@
                 "org.apache.slider:slider-core"
             ]
         },
-        "com.esotericsoftware.kryo:kryo": {
-            "locked": "2.24.0",
-            "requested": "2.24.0"
+        "com.esotericsoftware:kryo-shaded": {
+            "locked": "4.0.2",
+            "requested": "4.0.2"
         },
-        "com.esotericsoftware.minlog:minlog": {
-            "locked": "1.2",
+        "com.esotericsoftware:minlog": {
+            "locked": "1.3.0",
             "transitive": [
-                "com.esotericsoftware.kryo:kryo"
+                "com.esotericsoftware:kryo-shaded"
             ]
         },
         "com.fasterxml.jackson.core:jackson-annotations": {
@@ -12999,9 +12999,9 @@
             "locked": "1.10.19"
         },
         "org.objenesis:objenesis": {
-            "locked": "2.1",
+            "locked": "2.5.1",
             "transitive": [
-                "com.esotericsoftware.kryo:kryo",
+                "com.esotericsoftware:kryo-shaded",
                 "org.mockito:mockito-core"
             ]
         },
