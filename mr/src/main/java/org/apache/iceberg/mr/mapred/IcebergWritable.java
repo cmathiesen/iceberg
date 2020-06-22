@@ -21,27 +21,32 @@ package org.apache.iceberg.mr.mapred;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.IOException;
 import org.apache.hadoop.io.Writable;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.Record;
 
+/**
+ * Wraps an Iceberg Record in a Writable which Hive can use in the SerDe.
+ */
 public class IcebergWritable implements Writable {
 
   private Record record;
   private Schema schema;
 
-  public IcebergWritable() {}
+  @SuppressWarnings("checkstyle:HiddenField")
+  public void wrapRecord(Record record) {
+    this.record = record;
+  }
+
+  public Record record() {
+    return record;
+  }
 
   public void setRecord(Record record) {
     this.record = record;
   }
 
-  public Record getRecord() {
-    return record;
-  }
-
-  public Schema getSchema() {
+  public Schema schema() {
     return schema;
   }
 
@@ -49,13 +54,18 @@ public class IcebergWritable implements Writable {
     this.schema = schema;
   }
 
-  @Override
-  public void write(DataOutput dataOutput) throws IOException {
-
+  @SuppressWarnings("checkstyle:HiddenField")
+  public void wrapSchema(Schema schema) {
+    this.schema = schema;
   }
 
   @Override
-  public void readFields(DataInput dataInput) throws IOException {
+  public void write(DataOutput dataOutput) {
+    throw new UnsupportedOperationException("write is not supported.");
+  }
 
+  @Override
+  public void readFields(DataInput dataInput) {
+    throw new UnsupportedOperationException("readFields is not supported.");
   }
 }

@@ -914,6 +914,7 @@
         "commons-dbcp:commons-dbcp": {
             "locked": "1.4",
             "transitive": [
+                "org.apache.calcite:calcite-core",
                 "org.apache.hive:hive-metastore"
             ]
         },
@@ -1140,6 +1141,7 @@
         "joda-time:joda-time": {
             "locked": "2.8.1",
             "transitive": [
+                "org.apache.calcite:calcite-druid",
                 "org.apache.hive:hive-common"
             ]
         },
@@ -1163,6 +1165,12 @@
                 "org.apache.hbase:hbase-common",
                 "org.apache.hbase:hbase-protocol",
                 "org.apache.zookeeper:zookeeper"
+            ]
+        },
+        "net.hydromatic:eigenbase-properties": {
+            "locked": "1.1.5",
+            "transitive": [
+                "org.apache.calcite:calcite-core"
             ]
         },
         "net.java.dev.jets3t:jets3t": {
@@ -1214,6 +1222,26 @@
                 "org.apache.iceberg:iceberg-core"
             ]
         },
+        "org.apache.calcite:calcite-core": {
+            "locked": "1.10.0",
+            "transitive": [
+                "org.apache.calcite:calcite-druid",
+                "org.apache.hive:hive-exec"
+            ]
+        },
+        "org.apache.calcite:calcite-druid": {
+            "locked": "1.10.0",
+            "transitive": [
+                "org.apache.hive:hive-exec"
+            ]
+        },
+        "org.apache.calcite:calcite-linq4j": {
+            "locked": "1.10.0",
+            "transitive": [
+                "org.apache.calcite:calcite-core",
+                "org.apache.calcite:calcite-druid"
+            ]
+        },
         "org.apache.commons:commons-compress": {
             "locked": "1.19",
             "transitive": [
@@ -1225,8 +1253,9 @@
             ]
         },
         "org.apache.commons:commons-lang3": {
-            "locked": "3.1",
+            "locked": "3.2",
             "transitive": [
+                "org.apache.calcite:calcite-core",
                 "org.apache.hive:hive-common"
             ]
         },
@@ -1812,6 +1841,19 @@
                 "org.apache.hadoop:hadoop-yarn-common"
             ]
         },
+        "org.codehaus.janino:commons-compiler": {
+            "locked": "2.7.6",
+            "transitive": [
+                "org.apache.calcite:calcite-core",
+                "org.codehaus.janino:janino"
+            ]
+        },
+        "org.codehaus.janino:janino": {
+            "locked": "2.7.6",
+            "transitive": [
+                "org.apache.calcite:calcite-core"
+            ]
+        },
         "org.codehaus.jettison:jettison": {
             "locked": "1.1",
             "transitive": [
@@ -1908,6 +1950,8 @@
                 "io.dropwizard.metrics:metrics-json",
                 "io.dropwizard.metrics:metrics-jvm",
                 "org.apache.avro:avro",
+                "org.apache.calcite:calcite-core",
+                "org.apache.calcite:calcite-druid",
                 "org.apache.curator:curator-client",
                 "org.apache.directory.api:api-asn1-api",
                 "org.apache.directory.api:api-util",
@@ -2365,6 +2409,7 @@
         "commons-dbcp:commons-dbcp": {
             "locked": "1.4",
             "transitive": [
+                "org.apache.calcite:calcite-core",
                 "org.apache.hive:hive-metastore"
             ]
         },
@@ -2610,6 +2655,7 @@
         "joda-time:joda-time": {
             "locked": "2.8.1",
             "transitive": [
+                "org.apache.calcite:calcite-druid",
                 "org.apache.hive:hive-common"
             ]
         },
@@ -2635,6 +2681,12 @@
                 "org.apache.hbase:hbase-common",
                 "org.apache.hbase:hbase-protocol",
                 "org.apache.zookeeper:zookeeper"
+            ]
+        },
+        "net.hydromatic:eigenbase-properties": {
+            "locked": "1.1.5",
+            "transitive": [
+                "org.apache.calcite:calcite-core"
             ]
         },
         "net.java.dev.jets3t:jets3t": {
@@ -2685,6 +2737,26 @@
                 "org.apache.hive:hive-serde"
             ]
         },
+        "org.apache.calcite:calcite-core": {
+            "locked": "1.10.0",
+            "transitive": [
+                "org.apache.calcite:calcite-druid",
+                "org.apache.hive:hive-exec"
+            ]
+        },
+        "org.apache.calcite:calcite-druid": {
+            "locked": "1.10.0",
+            "transitive": [
+                "org.apache.hive:hive-exec"
+            ]
+        },
+        "org.apache.calcite:calcite-linq4j": {
+            "locked": "1.10.0",
+            "transitive": [
+                "org.apache.calcite:calcite-core",
+                "org.apache.calcite:calcite-druid"
+            ]
+        },
         "org.apache.commons:commons-compress": {
             "locked": "1.9",
             "transitive": [
@@ -2696,8 +2768,9 @@
             ]
         },
         "org.apache.commons:commons-lang3": {
-            "locked": "3.1",
+            "locked": "3.2",
             "transitive": [
+                "org.apache.calcite:calcite-core",
                 "org.apache.hive:hive-common"
             ]
         },
@@ -3226,6 +3299,19 @@
                 "org.apache.hadoop:hadoop-yarn-common"
             ]
         },
+        "org.codehaus.janino:commons-compiler": {
+            "locked": "2.7.6",
+            "transitive": [
+                "org.apache.calcite:calcite-core",
+                "org.codehaus.janino:janino"
+            ]
+        },
+        "org.codehaus.janino:janino": {
+            "locked": "2.7.6",
+            "transitive": [
+                "org.apache.calcite:calcite-core"
+            ]
+        },
         "org.codehaus.jettison:jettison": {
             "locked": "1.1",
             "transitive": [
@@ -3326,6 +3412,8 @@
                 "io.dropwizard.metrics:metrics-json",
                 "io.dropwizard.metrics:metrics-jvm",
                 "org.apache.avro:avro",
+                "org.apache.calcite:calcite-core",
+                "org.apache.calcite:calcite-druid",
                 "org.apache.curator:curator-client",
                 "org.apache.directory.api:api-asn1-api",
                 "org.apache.directory.api:api-util",
@@ -4565,7 +4653,6 @@
                 "co.cask.tephra:tephra-core",
                 "com.jolbox:bonecp",
                 "org.apache.calcite:calcite-core",
-                "org.apache.calcite:calcite-druid",
                 "org.apache.calcite:calcite-linq4j",
                 "org.apache.curator:apache-curator",
                 "org.apache.curator:curator-client",
@@ -4590,7 +4677,6 @@
                 "org.apache.hive.hcatalog:hive-hcatalog-core",
                 "org.apache.hive.shims:hive-shims-common",
                 "org.apache.hive:hive-metastore",
-                "org.apache.hive:hive-vector-code-gen",
                 "org.apache.slider:slider-core",
                 "org.apache.tez:tez-api",
                 "org.apache.tez:tez-common",
@@ -6772,7 +6858,6 @@
                 "co.cask.tephra:tephra-core",
                 "com.jolbox:bonecp",
                 "org.apache.calcite:calcite-core",
-                "org.apache.calcite:calcite-druid",
                 "org.apache.calcite:calcite-linq4j",
                 "org.apache.curator:apache-curator",
                 "org.apache.curator:curator-client",
@@ -6794,7 +6879,6 @@
                 "org.apache.hive.hcatalog:hive-hcatalog-core",
                 "org.apache.hive.shims:hive-shims-common",
                 "org.apache.hive:hive-metastore",
-                "org.apache.hive:hive-vector-code-gen",
                 "org.apache.slider:slider-core",
                 "org.apache.tez:tez-api",
                 "org.apache.tez:tez-common",
@@ -8867,7 +8951,6 @@
                 "co.cask.tephra:tephra-core",
                 "com.jolbox:bonecp",
                 "org.apache.calcite:calcite-core",
-                "org.apache.calcite:calcite-druid",
                 "org.apache.calcite:calcite-linq4j",
                 "org.apache.curator:apache-curator",
                 "org.apache.curator:curator-client",
@@ -8892,7 +8975,6 @@
                 "org.apache.hive.hcatalog:hive-hcatalog-core",
                 "org.apache.hive.shims:hive-shims-common",
                 "org.apache.hive:hive-metastore",
-                "org.apache.hive:hive-vector-code-gen",
                 "org.apache.slider:slider-core",
                 "org.apache.tez:tez-api",
                 "org.apache.tez:tez-common",
@@ -11075,7 +11157,6 @@
                 "co.cask.tephra:tephra-core",
                 "com.jolbox:bonecp",
                 "org.apache.calcite:calcite-core",
-                "org.apache.calcite:calcite-druid",
                 "org.apache.calcite:calcite-linq4j",
                 "org.apache.curator:apache-curator",
                 "org.apache.curator:curator-client",
@@ -11100,7 +11181,6 @@
                 "org.apache.hive.hcatalog:hive-hcatalog-core",
                 "org.apache.hive.shims:hive-shims-common",
                 "org.apache.hive:hive-metastore",
-                "org.apache.hive:hive-vector-code-gen",
                 "org.apache.slider:slider-core",
                 "org.apache.tez:tez-api",
                 "org.apache.tez:tez-common",

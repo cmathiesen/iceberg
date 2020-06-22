@@ -136,7 +136,7 @@ public class TestIcebergInputFormat {
     List<Record> records = new ArrayList<>();
     IcebergWritable value = (IcebergWritable) reader.createValue();
     while (reader.next(null, value)) {
-      records.add(value.getRecord().copy());
+      records.add(value.record().copy());
     }
     return records;
   }

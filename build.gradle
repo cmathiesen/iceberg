@@ -310,6 +310,7 @@ project(':iceberg-mr') {
     compileOnly("org.apache.hadoop:hadoop-client") {
       exclude group: 'org.apache.avro', module: 'avro'
     }
+    compileOnly("org.apache.hive:hive-serde")
 
     compileOnly("org.apache.hive:hive-exec::core") {
       exclude group: 'org.apache.avro', module: 'avro'
@@ -318,7 +319,7 @@ project(':iceberg-mr') {
       exclude group: 'org.apache.hive', module: 'hive-llap-tez'
       exclude group: 'org.apache.logging.log4j'
       exclude group: 'com.google.protobuf', module: 'protobuf-java'
-      exclude group: 'org.apache.calcite'
+      //exclude group: 'org.apache.calcite'
       exclude group: 'org.apache.calcite.avatica'
       exclude group: 'com.google.code.findbugs', module: 'jsr305'
       exclude group: 'com.google.guava'
