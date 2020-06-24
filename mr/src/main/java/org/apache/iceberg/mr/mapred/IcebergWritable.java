@@ -33,6 +33,14 @@ public class IcebergWritable implements Writable {
   private Record record;
   private Schema schema;
 
+  public IcebergWritable() {
+  }
+
+  public IcebergWritable(Record record, Schema schema) {
+    this.record = record;
+    this.schema = schema;
+  }
+
   @SuppressWarnings("checkstyle:HiddenField")
   public void wrapRecord(Record record) {
     this.record = record;
