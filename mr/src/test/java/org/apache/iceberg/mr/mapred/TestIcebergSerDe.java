@@ -29,13 +29,14 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.Record;
+import org.apache.iceberg.mr.TestHelpers;
 import org.apache.iceberg.relocated.com.google.common.collect.ImmutableMap;
 import org.apache.iceberg.relocated.com.google.common.collect.Lists;
 import org.apache.iceberg.types.Types;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.iceberg.types.Types.NestedField.required;
-import static org.junit.Assert.assertArrayEquals;
 
 public class TestIcebergSerDe {
 
@@ -59,14 +60,14 @@ public class TestIcebergSerDe {
     LocalDateTime localDateTime = LocalDateTime.of(2018, 11, 10, 11, 55);
     OffsetDateTime offsetDateTime = OffsetDateTime.of(localDateTime, ZoneOffset.UTC);
 
-    Object[] input = Lists.newArrayList("foo", 5, 6L, true, 1.02F, 1.4D, new byte[] { (byte) 0xe0},
+    List<Object> input = Lists.newArrayList("foo", 5, 6L, true, 1.02F, 1.4D, new byte[] { (byte) 0xe0},
         localDate, offsetDateTime, localDateTime, ImmutableMap.of(22, "bar"),
-        Arrays.asList(1000L, 2000L, 3000L)).toArray();
+        Arrays.asList(1000L, 2000L, 3000L));
 
     //Inputs and outputs differ slightly because of Date/Timestamp conversions for Hive
-    Object[] expected = Lists.newArrayList("foo", 5, 6L, true, 1.02F, 1.4D, new byte[] { (byte) 0xe0},
+    List<Object> expected = Lists.newArrayList("foo", 5, 6L, true, 1.02F, 1.4D, new byte[] { (byte) 0xe0},
         Date.valueOf(localDate), Timestamp.valueOf(offsetDateTime.toLocalDateTime()), Timestamp.valueOf(localDateTime),
-        ImmutableMap.of(22, "bar"), Arrays.asList(1000L, 2000L, 3000L)).toArray();
+        ImmutableMap.of(22, "bar"), Arrays.asList(1000L, 2000L, 3000L));
 
     Record record = TestHelpers.createCustomRecord(schema, input);
     IcebergWritable writable = new IcebergWritable();
@@ -75,7 +76,7 @@ public class TestIcebergSerDe {
 
     IcebergSerDe serDe = new IcebergSerDe();
     List<Object> deserialized = (List<Object>) serDe.deserialize(writable);
-    assertArrayEquals("Test values from an Iceberg Record deserialize into expected Java objects.",
-        expected, deserialized.toArray());
+    Assert.assertEquals("Test values from an Iceberg Record deserialize into expected Java objects.",
+        expected, deserialized);
   }
 }

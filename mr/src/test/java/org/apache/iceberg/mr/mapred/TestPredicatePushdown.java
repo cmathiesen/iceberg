@@ -35,6 +35,7 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.hadoop.HadoopCatalog;
+import org.apache.iceberg.mr.TestHelpers;
 import org.apache.iceberg.types.Types;
 import org.junit.Before;
 import org.junit.Rule;

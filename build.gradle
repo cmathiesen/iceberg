@@ -313,7 +313,7 @@ project(':iceberg-mr') {
     compileOnly("org.apache.hive:hive-serde")
 
     compileOnly("org.apache.hive:hive-exec::core") {
-      exclude group: 'org.apache.avro', module: 'avro'
+      //exclude group: 'org.apache.avro', module: 'avro'
       exclude group: 'org.slf4j', module: 'slf4j-log4j12'
       exclude group: 'org.pentaho' // missing dependency
       exclude group: 'org.apache.hive', module: 'hive-llap-tez'
@@ -334,6 +334,7 @@ project(':iceberg-mr') {
       exclude group: 'org.apache.calcite.avatica'
     }
 
+    testCompile("org.apache.avro:avro:1.9.2")
     testCompile("org.apache.calcite:calcite-core")
     testCompile("com.esotericsoftware:kryo-shaded:4.0.2")
     testCompile("com.fasterxml.jackson.core:jackson-annotations:2.6.5")

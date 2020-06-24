@@ -5333,6 +5333,7 @@
         },
         "org.apache.avro:avro": {
             "locked": "1.9.2",
+            "requested": "1.9.2",
             "transitive": [
                 "org.apache.hadoop:hadoop-common",
                 "org.apache.hadoop:hadoop-mapreduce-client-common",
@@ -7499,6 +7500,7 @@
         },
         "org.apache.avro:avro": {
             "locked": "1.9.2",
+            "requested": "1.9.2",
             "transitive": [
                 "org.apache.hadoop:hadoop-common",
                 "org.apache.hadoop:hadoop-mapreduce-client-common",
@@ -9631,6 +9633,7 @@
         },
         "org.apache.avro:avro": {
             "locked": "1.9.2",
+            "requested": "1.9.2",
             "transitive": [
                 "org.apache.hadoop:hadoop-common",
                 "org.apache.hadoop:hadoop-mapreduce-client-common",
@@ -11837,6 +11840,7 @@
         },
         "org.apache.avro:avro": {
             "locked": "1.9.2",
+            "requested": "1.9.2",
             "transitive": [
                 "org.apache.hadoop:hadoop-common",
                 "org.apache.hadoop:hadoop-mapreduce-client-common",
