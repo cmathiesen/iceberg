@@ -21,7 +21,6 @@ package org.apache.iceberg.mr.mapred.serde.objectinspector;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
@@ -30,7 +29,6 @@ import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
 import org.apache.iceberg.relocated.com.google.common.collect.Lists;
-import org.apache.iceberg.relocated.com.google.common.collect.Maps;
 import org.apache.iceberg.types.Types;
 
 public final class IcebergRecordObjectInspector extends StructObjectInspector {
@@ -39,13 +37,11 @@ public final class IcebergRecordObjectInspector extends StructObjectInspector {
           new IcebergRecordObjectInspector(Types.StructType.of(), Collections.emptyList());
 
   private final List<IcebergRecordStructField> structFields;
-  private final Map<String, IcebergRecordStructField> nameToStructField;
 
   public IcebergRecordObjectInspector(Types.StructType structType, List<ObjectInspector> objectInspectors) {
     Preconditions.checkArgument(structType.fields().size() == objectInspectors.size());
 
     this.structFields = Lists.newArrayListWithExpectedSize(structType.fields().size());
-    this.nameToStructField = Maps.newHashMapWithExpectedSize(structType.fields().size());
 
     int position = 0;
 
@@ -53,7 +49,6 @@ public final class IcebergRecordObjectInspector extends StructObjectInspector {
       ObjectInspector oi = objectInspectors.get(position);
       IcebergRecordStructField structField = new IcebergRecordStructField(field, oi, position);
       structFields.add(structField);
-      nameToStructField.put(field.name(), structField);
       position++;
     }
   }
@@ -69,7 +64,7 @@ public final class IcebergRecordObjectInspector extends StructObjectInspector {
 
   @Override
   public StructField getStructFieldRef(String name) {
-    return nameToStructField.get(name);
+    return ObjectInspectorUtils.getStandardStructFieldRef(name, structFields);
   }
 
   @Override
