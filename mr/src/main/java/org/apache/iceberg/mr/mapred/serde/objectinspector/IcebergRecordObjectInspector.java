@@ -47,12 +47,14 @@ public final class IcebergRecordObjectInspector extends StructObjectInspector {
     this.structFields = Lists.newArrayListWithExpectedSize(structType.fields().size());
     this.nameToStructField = Maps.newHashMapWithExpectedSize(structType.fields().size());
 
-    int idx = 0;
+    int position = 0;
 
     for (Types.NestedField field : structType.fields()) {
-      IcebergRecordStructField structField = new IcebergRecordStructField(field, objectInspectors.get(idx++));
+      ObjectInspector oi = objectInspectors.get(position);
+      IcebergRecordStructField structField = new IcebergRecordStructField(field, oi, position);
       structFields.add(structField);
       nameToStructField.put(field.name(), structField);
+      position++;
     }
   }
 
@@ -72,16 +74,15 @@ public final class IcebergRecordObjectInspector extends StructObjectInspector {
 
   @Override
   public Object getStructFieldData(Object o, StructField structField) {
-    return ((Record) o).getField(structField.getFieldName());
+    return ((Record) o).get(((IcebergRecordStructField) structField).position());
   }
 
   @Override
   public List<Object> getStructFieldsDataAsList(Object o) {
     Record record = (Record) o;
-    return record.struct()
-            .fields()
+    return structFields
             .stream()
-            .map(f -> record.getField(f.name()))
+            .map(f -> record.get(f.position()))
             .collect(Collectors.toList());
   }
 
@@ -118,10 +119,12 @@ public final class IcebergRecordObjectInspector extends StructObjectInspector {
 
     private final Types.NestedField field;
     private final ObjectInspector oi;
+    private final int position;
 
-    IcebergRecordStructField(Types.NestedField field, ObjectInspector oi) {
+    IcebergRecordStructField(Types.NestedField field, ObjectInspector oi, int position) {
       this.field = field;
       this.oi = oi;
+      this.position = position; // position in the record
     }
 
     @Override
@@ -142,6 +145,10 @@ public final class IcebergRecordObjectInspector extends StructObjectInspector {
     @Override
     public String getFieldComment() {
       return field.doc();
+    }
+
+    int position() {
+      return position;
     }
 
     @Override
