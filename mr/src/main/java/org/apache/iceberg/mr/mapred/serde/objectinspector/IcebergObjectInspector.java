@@ -19,8 +19,8 @@
 
 package org.apache.iceberg.mr.mapred.serde.objectinspector;
 
-import javax.annotation.Nullable;
 import java.util.List;
+import javax.annotation.Nullable;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
@@ -41,7 +41,7 @@ public final class IcebergObjectInspector extends TypeUtil.SchemaVisitor<ObjectI
     return TypeUtil.visit(schema, new IcebergObjectInspector());
   }
 
-  public static ObjectInspector create(Types.NestedField ...fields) {
+  public static ObjectInspector create(Types.NestedField... fields) {
     return create(new Schema(fields));
   }
 
