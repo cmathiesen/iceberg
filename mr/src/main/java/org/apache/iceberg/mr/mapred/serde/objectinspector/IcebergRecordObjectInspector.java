@@ -21,7 +21,6 @@ package org.apache.iceberg.mr.mapred.serde.objectinspector;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
@@ -30,7 +29,6 @@ import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
 import org.apache.iceberg.relocated.com.google.common.collect.Lists;
-import org.apache.iceberg.relocated.com.google.common.collect.Maps;
 import org.apache.iceberg.types.Types;
 
 public final class IcebergRecordObjectInspector extends StructObjectInspector {
@@ -39,20 +37,19 @@ public final class IcebergRecordObjectInspector extends StructObjectInspector {
           new IcebergRecordObjectInspector(Types.StructType.of(), Collections.emptyList());
 
   private final List<IcebergRecordStructField> structFields;
-  private final Map<String, IcebergRecordStructField> nameToStructField;
 
   public IcebergRecordObjectInspector(Types.StructType structType, List<ObjectInspector> objectInspectors) {
     Preconditions.checkArgument(structType.fields().size() == objectInspectors.size());
 
     this.structFields = Lists.newArrayListWithExpectedSize(structType.fields().size());
-    this.nameToStructField = Maps.newHashMapWithExpectedSize(structType.fields().size());
 
-    int idx = 0;
+    int position = 0;
 
     for (Types.NestedField field : structType.fields()) {
-      IcebergRecordStructField structField = new IcebergRecordStructField(field, objectInspectors.get(idx++));
+      ObjectInspector oi = objectInspectors.get(position);
+      IcebergRecordStructField structField = new IcebergRecordStructField(field, oi, position);
       structFields.add(structField);
-      nameToStructField.put(field.name(), structField);
+      position++;
     }
   }
 
@@ -67,21 +64,20 @@ public final class IcebergRecordObjectInspector extends StructObjectInspector {
 
   @Override
   public StructField getStructFieldRef(String name) {
-    return nameToStructField.get(name);
+    return ObjectInspectorUtils.getStandardStructFieldRef(name, structFields);
   }
 
   @Override
   public Object getStructFieldData(Object o, StructField structField) {
-    return ((Record) o).getField(structField.getFieldName());
+    return ((Record) o).get(((IcebergRecordStructField) structField).position());
   }
 
   @Override
   public List<Object> getStructFieldsDataAsList(Object o) {
     Record record = (Record) o;
-    return record.struct()
-            .fields()
+    return structFields
             .stream()
-            .map(f -> record.getField(f.name()))
+            .map(f -> record.get(f.position()))
             .collect(Collectors.toList());
   }
 
@@ -118,10 +114,12 @@ public final class IcebergRecordObjectInspector extends StructObjectInspector {
 
     private final Types.NestedField field;
     private final ObjectInspector oi;
+    private final int position;
 
-    IcebergRecordStructField(Types.NestedField field, ObjectInspector oi) {
+    IcebergRecordStructField(Types.NestedField field, ObjectInspector oi, int position) {
       this.field = field;
       this.oi = oi;
+      this.position = position; // position in the record
     }
 
     @Override
@@ -142,6 +140,10 @@ public final class IcebergRecordObjectInspector extends StructObjectInspector {
     @Override
     public String getFieldComment() {
       return field.doc();
+    }
+
+    int position() {
+      return position;
     }
 
     @Override
