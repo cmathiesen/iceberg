@@ -20,11 +20,10 @@
 package org.apache.iceberg.mr;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.iceberg.DataFile;
-import org.apache.iceberg.FileScanTask;
-import org.apache.iceberg.Schema;
-import org.apache.iceberg.StructLike;
+import org.apache.iceberg.*;
 import org.apache.iceberg.avro.Avro;
+import org.apache.iceberg.data.GenericRecord;
+import org.apache.iceberg.data.Record;
 import org.apache.iceberg.data.avro.DataReader;
 import org.apache.iceberg.data.orc.GenericOrcReader;
 import org.apache.iceberg.data.parquet.GenericParquetReaders;
@@ -36,6 +35,9 @@ import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.io.InputFile;
 import org.apache.iceberg.orc.ORC;
 import org.apache.iceberg.parquet.Parquet;
+import org.apache.iceberg.types.Types;
+
+import java.util.function.Function;
 
 public class IcebergRecordReader<T> {
 
@@ -61,9 +63,11 @@ public class IcebergRecordReader<T> {
         return newOrcIterable(inputFile, currentTask, readSchema);
       case PARQUET:
         return newParquetIterable(inputFile, currentTask, readSchema);
+      case METADATA:
+        return newMetadataIterable(currentTask.asDataTask(), readSchema);
       default:
         throw new UnsupportedOperationException(
-            String.format("Cannot read %s file: %s", file.format().name(), file.path()));
+                String.format("Cannot read %s file: %s", file.format().name(), file.path()));
     }
   }
 
@@ -78,11 +82,11 @@ public class IcebergRecordReader<T> {
 
   private CloseableIterable<T> newParquetIterable(InputFile inputFile, FileScanTask task, Schema readSchema) {
     Parquet.ReadBuilder parquetReadBuilder = Parquet
-        .read(inputFile)
-        .project(readSchema)
-        .filter(task.residual())
-        .caseSensitive(caseSensitive)
-        .split(task.start(), task.length());
+            .read(inputFile)
+            .project(readSchema)
+            .filter(task.residual())
+            .caseSensitive(caseSensitive)
+            .split(task.start(), task.length());
     if (reuseContainers) {
       parquetReadBuilder.reuseContainers();
     }
@@ -94,13 +98,19 @@ public class IcebergRecordReader<T> {
 
   private CloseableIterable<T> newOrcIterable(InputFile inputFile, FileScanTask task, Schema readSchema) {
     ORC.ReadBuilder orcReadBuilder = ORC
-        .read(inputFile)
-        .project(readSchema)
-        .caseSensitive(caseSensitive)
-        .split(task.start(), task.length());
+            .read(inputFile)
+            .project(readSchema)
+            .caseSensitive(caseSensitive)
+            .split(task.start(), task.length());
     // ORC does not support reuse containers yet
     orcReadBuilder.createReaderFunc(fileSchema -> GenericOrcReader.buildReader(readSchema, fileSchema));
     return applyResidualFiltering(orcReadBuilder.build(), task.residual(), readSchema);
+  }
+
+  private CloseableIterable<T> newMetadataIterable(DataTask task, Schema readSchema) {
+    CloseableIterable<Record> asRecordRows = CloseableIterable.transform(
+            task.asDataTask().rows(), CreateMetadataRecordFunction.class);
+    return applyResidualFiltering(asRecordRows, null, readSchema);
   }
 
   private CloseableIterable<T> applyResidualFiltering(CloseableIterable iter, Expression residual, Schema readSchema) {
@@ -109,6 +119,38 @@ public class IcebergRecordReader<T> {
       return CloseableIterable.filter(iter, record -> filter.eval((StructLike) record));
     } else {
       return iter;
+    }
+  }
+
+  private static class MetadataInternalRow {
+    private Schema schema;
+    private StructLike structLike;
+
+    public MetadataInternalRow(Schema schema, StructLike structLike) {
+      this.schema = schema;
+      this.structLike = structLike;
+    }
+
+    public Schema getSchema() {
+      return schema;
+    }
+
+    public StructLike getStructLike() {
+      return structLike;
+    }
+  }
+
+
+
+  private static class CreateMetadataRecordFunction implements Function<MetadataInternalRow, Record> {
+
+    @Override
+    public Record apply(MetadataInternalRow metadataInternalRow) {
+      Record record = GenericRecord.create(metadataInternalRow.schema);
+      for(int i = 0; i < metadataInternalRow.schema.columns().size(); i++) {
+        record.set(i, metadataInternalRow.structLike.get(i, metadataInternalRow.schema.columns().get(i).getClass()));
+      }
+      return record;
     }
   }
 

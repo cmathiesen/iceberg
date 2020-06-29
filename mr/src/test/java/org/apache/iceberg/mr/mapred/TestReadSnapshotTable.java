@@ -91,26 +91,20 @@ public class TestReadSnapshotTable {
     snapshotId = snapshots.get(0).snapshotId();
   }
 
-  @Ignore("TODO: re-enable this test when snapshot functionality added")
+  //@Ignore("TODO: re-enable this test when snapshot functionality added")
   @Test
   public void testReadSnapshotTable() {
     shell.execute("CREATE DATABASE source_db");
 
     shell.execute(new StringBuilder()
-        .append("CREATE TABLE source_db.table_a ")
-        .append("STORED BY 'org.apache.iceberg.mr.mapred.IcebergStorageHandler' ")
-        .append("LOCATION '")
-        .append(tableLocation.getAbsolutePath() + "/source_db/table_a'")
-        .toString());
+            .append("CREATE TABLE source_db.table_a ")
+            .append("STORED BY 'org.apache.iceberg.mr.mapred.IcebergStorageHandler' ")
+            .append("LOCATION '")
+            .append(tableLocation.getAbsolutePath() + "/source_db/table_a#snapshots'")
+            .toString());
 
-    shell.execute(new StringBuilder()
-        .append("CREATE TABLE source_db.table_a__snapshots ")
-        .append("STORED BY 'org.apache.iceberg.mr.mapred.IcebergStorageHandler' ")
-        .append("LOCATION '")
-        .append(tableLocation.getAbsolutePath() + "/source_db/table_a'")
-        .toString());
 
-    List<Object[]> result = shell.executeStatement("SELECT * FROM source_db.table_a__snapshots");
+    List<Object[]> result = shell.executeStatement("SELECT * FROM source_db.table_a");
 
     assertEquals(3, result.size());
   }
