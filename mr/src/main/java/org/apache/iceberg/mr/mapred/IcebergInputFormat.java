@@ -64,7 +64,7 @@ public class IcebergInputFormat<T> implements InputFormat<Void, T>, CombineHiveI
 
   @Override
   public InputSplit[] getSplits(JobConf conf, int numSplits) throws IOException {
-    table = TableResolver.resolveTableFromJob(conf);
+    table = TableResolver.resolveTableFromConfiguration(conf);
     String location = conf.get(InputFormatConfig.TABLE_LOCATION);
     List<CombinedScanTask> tasks = planTasks(conf);
     return createSplits(tasks, location);

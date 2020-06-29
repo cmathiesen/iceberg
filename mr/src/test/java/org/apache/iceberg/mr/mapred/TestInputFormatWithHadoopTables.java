@@ -134,17 +134,11 @@ public class TestInputFormatWithHadoopTables {
     assertEquals(3, records.size());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test(expected = NullPointerException.class)
   public void testGetSplitsNoLocation() throws IOException {
     conf.set("iceberg.catalog", "hadoop.tables");
     conf.set("name", "source_db.table_a");
     format.getSplits(conf, 1);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testGetSplitsNoName() throws IOException {
-    conf.set("iceberg.catalog", "hadoop.tables");
-    conf.set("location", "file:" + tableLocation);
-    format.getSplits(conf, 1);
-  }
 }

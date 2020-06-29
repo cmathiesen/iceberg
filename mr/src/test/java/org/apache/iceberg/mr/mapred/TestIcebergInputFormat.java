@@ -92,17 +92,10 @@ public class TestIcebergInputFormat {
     assertEquals(splits.length, 1);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test(expected = NullPointerException.class)
   public void testGetSplitsNoLocation() throws IOException {
     conf.set(InputFormatConfig.CATALOG_NAME, InputFormatConfig.HADOOP_TABLES);
     conf.set(InputFormatConfig.TABLE_NAME, "source_db.table_a");
-    inputFormat.getSplits(conf, 1);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testGetSplitsNoName() throws IOException {
-    conf.set(InputFormatConfig.CATALOG_NAME, InputFormatConfig.HADOOP_TABLES);
-    conf.set(InputFormatConfig.TABLE_LOCATION, "file:" + tableLocation.getAbsolutePath());
     inputFormat.getSplits(conf, 1);
   }
 

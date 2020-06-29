@@ -157,7 +157,7 @@ public class IcebergInputFormat<T> extends InputFormat<Void, T> {
     private Schema expectedSchema;
     private boolean reuseContainers;
     private boolean caseSensitive;
-    private InMemoryDataModel inMemoryDataModel;
+    private InputFormatConfig.InMemoryDataModel inMemoryDataModel;
     private Iterator<FileScanTask> tasks;
     private T currentRow;
     private CloseableIterator<T> currentIterator;
@@ -174,7 +174,8 @@ public class IcebergInputFormat<T> extends InputFormat<Void, T> {
       this.expectedSchema = readSchemaStr != null ? SchemaParser.fromJson(readSchemaStr) : tableSchema;
       this.reuseContainers = conf.getBoolean(InputFormatConfig.REUSE_CONTAINERS, false);
       this.caseSensitive = conf.getBoolean(InputFormatConfig.CASE_SENSITIVE, true);
-      this.inMemoryDataModel = conf.getEnum(InputFormatConfig.IN_MEMORY_DATA_MODEL, InMemoryDataModel.GENERIC);
+      this.inMemoryDataModel = conf.getEnum(InputFormatConfig.IN_MEMORY_DATA_MODEL,
+              InputFormatConfig.InMemoryDataModel.GENERIC);
       this.currentIterator = open(tasks.next(), expectedSchema).iterator();
     }
 
@@ -219,7 +220,6 @@ public class IcebergInputFormat<T> extends InputFormat<Void, T> {
     public void close() throws IOException {
       currentIterator.close();
     }
-
 
     private CloseableIterable<T> open(FileScanTask currentTask, Schema readSchema) {
       org.apache.iceberg.mr.IcebergRecordReader<T> wrappedReader = new org.apache.iceberg.mr.IcebergRecordReader<T>();

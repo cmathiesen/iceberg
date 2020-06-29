@@ -62,11 +62,6 @@ public class IcebergWritable implements Writable {
     this.schema = schema;
   }
 
-  @SuppressWarnings("checkstyle:HiddenField")
-  public void wrapSchema(Schema schema) {
-    this.schema = schema;
-  }
-
   @Override
   public void write(DataOutput dataOutput) {
     throw new UnsupportedOperationException("write is not supported.");
