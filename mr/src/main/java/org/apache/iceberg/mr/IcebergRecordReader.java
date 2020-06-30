@@ -35,9 +35,12 @@ import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.io.InputFile;
 import org.apache.iceberg.orc.ORC;
 import org.apache.iceberg.parquet.Parquet;
+import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
+import org.apache.iceberg.util.DateTimeUtil;
 
-import java.util.function.Function;
+import java.util.List;
+import java.util.Map;
 
 public class IcebergRecordReader<T> {
 
@@ -108,9 +111,8 @@ public class IcebergRecordReader<T> {
   }
 
   private CloseableIterable<T> newMetadataIterable(DataTask task, Schema readSchema) {
-    CloseableIterable<Record> asRecordRows = CloseableIterable.transform(
-            task.asDataTask().rows(), CreateMetadataRecordFunction.class);
-    return applyResidualFiltering(asRecordRows, null, readSchema);
+    CloseableIterable asStructLikeRows = task.rows();
+    return CloseableIterable.transform(asStructLikeRows, row -> convertToRecord((StructLike) row, readSchema));
   }
 
   private CloseableIterable<T> applyResidualFiltering(CloseableIterable iter, Expression residual, Schema readSchema) {
@@ -122,36 +124,32 @@ public class IcebergRecordReader<T> {
     }
   }
 
-  private static class MetadataInternalRow {
-    private Schema schema;
-    private StructLike structLike;
-
-    public MetadataInternalRow(Schema schema, StructLike structLike) {
-      this.schema = schema;
-      this.structLike = structLike;
+  private Record convertToRecord(StructLike structLike, Schema readSchema) {
+    Record record = GenericRecord.create(readSchema);
+    for(int i = 0; i < readSchema.columns().size(); i++) {
+      Type type = readSchema.findType(readSchema.columns().get(i).name());
+      record.set(i, fieldValue(type, structLike, i, readSchema));
     }
+    return record;
+  }
 
-    public Schema getSchema() {
-      return schema;
-    }
-
-    public StructLike getStructLike() {
-      return structLike;
+  private Class javaType(Schema readSchema, int column) {
+    Type id = readSchema.findType(readSchema.columns().get(column).name());
+    if (id.isMapType()) {
+      return Map.class;
+    } else if (id.isListType()) {
+      return List.class;
+    } else {
+      return id.typeId().javaClass();
     }
   }
 
-
-
-  private static class CreateMetadataRecordFunction implements Function<MetadataInternalRow, Record> {
-
-    @Override
-    public Record apply(MetadataInternalRow metadataInternalRow) {
-      Record record = GenericRecord.create(metadataInternalRow.schema);
-      for(int i = 0; i < metadataInternalRow.schema.columns().size(); i++) {
-        record.set(i, metadataInternalRow.structLike.get(i, metadataInternalRow.schema.columns().get(i).getClass()));
-      }
-      return record;
+  private Object fieldValue(Type type, StructLike structLike, int column, Schema readSchema) {
+    if (type instanceof Types.TimestampType) {
+      Long value = (Long) structLike.get(column, javaType(readSchema, column));
+      return ((Types.TimestampType) type).shouldAdjustToUTC() ? DateTimeUtil.timestamptzFromMicros(value) : DateTimeUtil.timestampFromMicros(value);
+    } else {
+      return structLike.get(column, javaType(readSchema, column));
     }
   }
-
 }

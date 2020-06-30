@@ -51,7 +51,7 @@ import static org.apache.iceberg.types.Types.NestedField.required;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(StandaloneHiveRunner.class)
-public class TestReadSnapshotTable {
+public class TestReadMetadataTables {
 
   @HiveSQL(files = {}, autoStart = true)
   private HiveShell shell;
@@ -91,7 +91,6 @@ public class TestReadSnapshotTable {
     snapshotId = snapshots.get(0).snapshotId();
   }
 
-  //@Ignore("TODO: re-enable this test when snapshot functionality added")
   @Test
   public void testReadSnapshotTable() {
     shell.execute("CREATE DATABASE source_db");
@@ -103,6 +102,21 @@ public class TestReadSnapshotTable {
             .append(tableLocation.getAbsolutePath() + "/source_db/table_a#snapshots'")
             .toString());
 
+    List<Object[]> result = shell.executeStatement("SELECT * FROM source_db.table_a");
+
+    assertEquals(3, result.size());
+  }
+
+  @Test
+  public void testReadHistoryTable() {
+    shell.execute("CREATE DATABASE source_db");
+
+    shell.execute(new StringBuilder()
+            .append("CREATE TABLE source_db.table_a ")
+            .append("STORED BY 'org.apache.iceberg.mr.mapred.IcebergStorageHandler' ")
+            .append("LOCATION '")
+            .append(tableLocation.getAbsolutePath() + "/source_db/table_a#history'")
+            .toString());
 
     List<Object[]> result = shell.executeStatement("SELECT * FROM source_db.table_a");
 
@@ -151,7 +165,7 @@ public class TestReadSnapshotTable {
         .append("CREATE TABLE source_db.table_a__snapshots ")
         .append("STORED BY 'org.apache.iceberg.mr.mapred.IcebergStorageHandler' ")
         .append("LOCATION '")
-        .append(tableLocation.getAbsolutePath() + "/source_db/table_a'")
+        .append(tableLocation.getAbsolutePath() + "/source_db/table_a#snapshots'")
         .toString());
 
     List<Object[]> resultLatestTable = shell.executeStatement("SELECT * FROM source_db.table_a");
